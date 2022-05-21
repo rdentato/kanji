@@ -15,5 +15,5 @@ It's a simple CPU-like machine with up to 254 registers, each register can hold 
    - a dynamic buffer (for text)
    - a map from *values* to *values*
 
-It can access external C functions (with the proper interface) and its code can "called" from C functions.
+It can access external C functions (with the proper interface) and its code can be "called" from C functions.
 
