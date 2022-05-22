@@ -107,7 +107,29 @@ For these, the third argument can be an integer (between 0 and 63)
  
 ```
 
-## Flow control
+## Jump
+
+The argument can be a label, an integer or a register (which
+contains the address to jump to).
+
+```
+ JEQ n
+ JNE n
+ JGT n
+ JGE n
+ JLT n
+ JLE n
+ JMP n
+```
+
+## Subroutines
+
+Subroutines accept a single value as argument and return a
+a single value (you can use a vector to pass, return multiple values)
+
+```
+  JSR 
+```
 
 ## C functions
 
