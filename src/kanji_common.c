@@ -12,6 +12,7 @@ int kaj_opcode_len(uint32_t op)
     case TOK_RT8: 
     case TOK_CP8: 
     case TOK_ST8: len++;
+    
     case TOK_RTN:
     case TOK_CPN:
     case TOK_STN:
@@ -20,14 +21,15 @@ int kaj_opcode_len(uint32_t op)
     case TOK_STI:
     case TOK_RT4:
     case TOK_CP4:
-    case TOK_ST4: len++;
+    case TOK_ST4: 
+    case TOK_JSR: len++;
                   break;
 
     case TOK_NOP: len += op >> 8;
                   break;
 
   }
-  dbgtrc("LEN: %02X %d",op&0x7F,len);
+  _dbgtrc("LEN: %02X %d",op&0x7F,len);
   return len;
 }
 
@@ -57,7 +59,6 @@ kaj_pgm_t kaj_new(int32_t pgm_init_size, int32_t lbl_init_size, uint16_t stk_siz
   pgm->pgm_err   = 0;
   pgm->stk_size  = 256;
   pgm->max_regs  = 0;
-  pgm->arg_reg   = 0;
   pgm->pgm_flg   = 0;
   pgm->cur_ln = 0;
 

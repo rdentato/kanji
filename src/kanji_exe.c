@@ -339,31 +339,41 @@ int kaj_step(kaj_pgm_t pgm)
       if (pgm->pgm_flg & FLG_LESSER) pgm->cur_ln = pgm->lst.regs[(op >> 8) & 0xFF];
       break;
 
-    case TOK_ARR:
-      reg = (op >> 8) & 0xFF;
-      if (reg != 0xFF) pgm->arg_reg = reg;
-      break;
-
     case TOK_ARG:
       reg = (op >> 8) & 0xFF; 
       memcpy(&(pgm->lst.regs[reg]),&(pgm->pgm[pgm->pgm_count-2]),8);
       break;
 
     case TOK_JSR:
-     _dbgtrc("JSR: op: %08X arg: %d %lX", op, pgm->arg_reg, pgm->lst.regs[pgm->arg_reg]);
-      start_JSR(pgm, pgm->arg_reg, pgm->lst.regs[pgm->arg_reg]);
-     _dbgtrc("pgm stack: -1 %08X\n                 -2 %08X\n                 -3 %08X",pgm->pgm[pgm->pgm_count-1],pgm->pgm[pgm->pgm_count-2],pgm->pgm[pgm->pgm_count-3]);
-      pgm->cur_ln = op>>8;
+      {
+        uint32_t arr = 0;
+        val_t in;
+
+        arr = pgm->pgm[pgm->cur_ln++];
+       
+        reg = arr & 0xFF;
+        dbgtrc("arr: %08X",arr);
+        if ((arr & 0xFF00) != 0xFF00)
+          in = pgm->lst.regs[(arr >> 8) & 0xFF];
+        else in = valnil;
+
+        dbgtrc("%d %d %lX",pgm->cur_ln,reg,in);
+        
+        start_JSR(pgm, reg, in);
+ 
+        dbgtrc("pgm stack: -1 %08X\n                 -2 %08X\n                 -3 %08X",pgm->pgm[pgm->pgm_count-1],pgm->pgm[pgm->pgm_count-2],pgm->pgm[pgm->pgm_count-3]);
+        pgm->cur_ln = op>>8;
+      }
       break;
 
     case TOK_BSR: {
-        int32_t dest;
-       _dbgtrc("BSR: op: %08X arg: %d %lX", op, pgm->arg_reg, pgm->lst.regs[pgm->arg_reg]);
-        start_JSR(pgm, pgm->arg_reg, pgm->lst.regs[pgm->arg_reg]);
-       _dbgtrc("pgm stack: -1 %08X\n                 -2 %08X\n                 -3 %08X",pgm->pgm[pgm->pgm_count-1],pgm->pgm[pgm->pgm_count-2],pgm->pgm[pgm->pgm_count-3]);
-        dest = pgm->lst.regs[(op>>8) & 0XFF];
-        if (dest > pgm->max_pgm) dest = pgm->max_pgm;
-        pgm->cur_ln = dest ;
+//        int32_t dest;
+//       _dbgtrc("BSR: op: %08X arg: %d %lX", op, pgm->arg_reg, pgm->lst.regs[pgm->arg_reg]);
+//        start_JSR(pgm, pgm->arg_reg, pgm->lst.regs[pgm->arg_reg]);
+//       _dbgtrc("pgm stack: -1 %08X\n                 -2 %08X\n                 -3 %08X",pgm->pgm[pgm->pgm_count-1],pgm->pgm[pgm->pgm_count-2],pgm->pgm[pgm->pgm_count-3]);
+//        dest = pgm->lst.regs[(op>>8) & 0XFF];
+//        if (dest > pgm->max_pgm) dest = pgm->max_pgm;
+//        pgm->cur_ln = dest ;
       }
       break;
 

@@ -41,7 +41,7 @@ typedef struct kaj_pgm_s {
   uint32_t  dta_start;
   uint16_t  stk_size;
   uint8_t   pgm_flg;
-  uint8_t   arg_reg;
+  uint8_t   pgm_aux;
   uint8_t   lst_type;
   uint8_t   max_regs;
 } *kaj_pgm_t;

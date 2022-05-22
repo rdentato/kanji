@@ -306,11 +306,18 @@ static char *arg_JSR(kaj_pgm_t pgm, uint32_t op, char *start)
 
   if (skp(s, "'%'x?x W", &t)) {
     reg = add_reg(pgm,s);
+    s = t;
   }
   else reg = 0xFF;
-  add_long(pgm, (reg<<8) | TOK_ARR);
+
+  if (skp(s, "'%'x?x W", &t)) {
+    reg |= add_reg(pgm,s) << 8;
+  }
+  else reg |= (reg << 8);
 
   add_long(pgm,op);
+  add_long(pgm, reg);
+
   return t;
 }
 
@@ -626,7 +633,6 @@ int32_t kaj_addline(kaj_pgm_t pgm, char *line)
           t = arg_S_C_R(pgm,op,t,t,TOK_RT2,TOK_RT4,TOK_RT8,TOK_RTI,TOK_RTN);
           break;
 
-        case TOK_ARR :
         case TOK_ARG :
           t = arg_1_regs(pgm,op,t);
           break;
