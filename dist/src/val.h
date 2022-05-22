@@ -177,6 +177,8 @@ int32_t valsize(val_t v);
   val_t valand(val_t a, val_t b);
   val_t valor(val_t a, val_t b);
   val_t valxor(val_t a, val_t b);
+  val_t valnot(val_t a);
+  val_t valneg(val_t a);
 
 #ifdef VAL_MAIN
 
@@ -281,6 +283,20 @@ val_int_op(mod,%)
 val_int_op(and,&)
 val_int_op(or,|)
 val_int_op(xor,^)
+
+val_t valnot(val_t a)
+{
+  if (valisdbl(a)) return val(((int32_t)valtodbl(a)) ^ 0xFFFFFFFF);
+  if (valisint(a)) return val(valtoint(a) ^ 0xFFFFFFFF);
+  return a;
+}
+
+val_t valneg(val_t a)
+{
+  if (valisdbl(a)) return val(valtodbl(a) * -1.0);
+  if (valisint(a)) return val(valtoint(a) * -1);
+  return a;
+}
 
 typedef struct val_info_s {
     void *arr;
