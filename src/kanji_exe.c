@@ -27,11 +27,11 @@ static int push_pgm(kaj_pgm_t pgm, uint32_t val)
   return ERR_NONE;
 }
 
-static uint32_t pop_pgm(kaj_pgm_t pgm)
-{
-  if (pgm->pgm_count <= pgm->max_pgm+1) return 0;
-  return pgm->pgm[--pgm->pgm_count];
-}
+// static uint32_t pop_pgm(kaj_pgm_t pgm)
+// {
+//   if (pgm->pgm_count <= pgm->max_pgm+1) return 0;
+//   return pgm->pgm[--pgm->pgm_count];
+// }
 
 static int start_JSR(kaj_pgm_t pgm, uint8_t reg, val_t input)
 {
@@ -171,6 +171,14 @@ int kaj_step(kaj_pgm_t pgm)
       }
       break;
 
+    case TOK_NOT:
+      pgm->lst.regs[(op >> 8) & 0xFF] = valnot(pgm->lst.regs[(op >> 16) & 0xFF]);
+      break;
+
+    case TOK_NEG:
+      pgm->lst.regs[(op >> 8) & 0xFF] = valneg(pgm->lst.regs[(op >> 16) & 0xFF]);
+      break;
+
     case TOK_FLT: {
         val_t v;
         v = pgm->lst.regs[(op >> 16) & 0xFF];
@@ -185,34 +193,6 @@ int kaj_step(kaj_pgm_t pgm)
       }
       break;
 
-    case TOK_NOT: {
-        val_t v;
-        v = pgm->lst.regs[(op >> 16) & 0xFF];
-        if (valisdbl(v)) {
-          pgm->lst.regs[(op >> 8) & 0xFF] = val(((int32_t)valtodbl(v)) ^ 0xFFFFFFFF);
-          break;
-        }
-        if (valisint(v)) {
-          pgm->lst.regs[(op >> 8) & 0xFF] = val(valtoint(v) ^ 0xFFFFFFFF);
-          break;
-        }
-      }
-      break;
-
-    case TOK_NEG: {
-        val_t v;
-        v = pgm->lst.regs[(op >> 16) & 0xFF];
-        if (valisdbl(v)) {
-          pgm->lst.regs[(op >> 8) & 0xFF] = val(valtodbl(v) * -1.0);
-          break;
-        }
-        if (valisint(v)) {
-          pgm->lst.regs[(op >> 8) & 0xFF] = val(valtoint(v) * -1) ;
-          break;
-        }
-      }
-      break;
-
     case TOK_INC: {
         val_t v;
         int32_t inc;
@@ -220,7 +200,7 @@ int kaj_step(kaj_pgm_t pgm)
         inc = op >> 16;
        _dbgtrc("inc: %d",inc);
         if (valisdbl(v)) {
-          pgm->lst.regs[(op >> 8) & 0xFF] = val(valtodbl(v) + inc);
+          pgm->lst.regs[(op >> 8) & 0xFF] = val(valtodbl(v) + (double)inc);
           break;
         }
         if (valisint(v)) {
@@ -236,7 +216,7 @@ int kaj_step(kaj_pgm_t pgm)
         v = pgm->lst.regs[(op >> 8) & 0xFF];
         dec = op >> 16;
         if (valisdbl(v)) {
-          pgm->lst.regs[(op >> 8) & 0xFF] = val(valtodbl(v) - dec);
+          pgm->lst.regs[(op >> 8) & 0xFF] = val(valtodbl(v) - (double)dec);
           break;
         }
         if (valisint(v)) {
@@ -249,21 +229,21 @@ int kaj_step(kaj_pgm_t pgm)
     case TOK_CMP: {
         int n;
         n = valcmp(pgm->lst.regs[(op >> 8) & 0xFF], pgm->lst.regs[(op >> 16) & 0xFF]);
-        pgm->pgm_flg = "\1\2\4"[n+1];
+        pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
       }
       break;
 
     case TOK_CP2: {
         int n;
         n = valcmp(pgm->lst.regs[(op >> 8) & 0xFF], val(((int32_t)op) >> 16));
-        pgm->pgm_flg = "\1\2\4"[n+1];
+        pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
       }
       break;
 
     case TOK_CP4: {
         int n;
         n = valcmp(pgm->lst.regs[(op >> 8) & 0xFF], val((int32_t)(pgm->pgm[pgm->cur_ln++])));
-        pgm->pgm_flg = "\1\2\4"[n+1];
+        pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
       }
       break;
 
@@ -273,7 +253,7 @@ int kaj_step(kaj_pgm_t pgm)
         val_t v;
         memcpy(&v, &(pgm->pgm[pgm->cur_ln]), 8);
         n = valcmp( pgm->lst.regs[(op >> 8) & 0xFF], v);
-        pgm->pgm_flg = "\1\2\4"[n+1];
+        pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
         pgm->cur_ln+=2;
       }
       break;
@@ -285,7 +265,7 @@ int kaj_step(kaj_pgm_t pgm)
         memcpy(&v, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
        _dbgtrc("R: %lX, V: %lX",pgm->lst.regs[(op >> 8) & 0xFF],*(uint64_t *)(pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2)));
         n = valcmp( pgm->lst.regs[(op >> 8) & 0xFF], v);
-        pgm->pgm_flg = "\1\2\4"[n+1];
+        pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
         pgm->cur_ln++;
       }
       break;
@@ -297,7 +277,7 @@ int kaj_step(kaj_pgm_t pgm)
         memcpy(&v, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
        _dbgtrc("R: %lX, V: %lX",pgm->lst.regs[(op >> 8) & 0xFF],*(uint64_t *)(pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2)));
         n = valcmp( pgm->lst.regs[(op >> 8) & 0xFF], v);
-        pgm->pgm_flg = "\1\2\4"[n+1];
+        pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
         pgm->cur_ln++;
       }
       break;
