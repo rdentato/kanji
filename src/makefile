@@ -12,28 +12,46 @@ OPT=-O2 -DDEBUG=DEBUG_TEST
 
 #PROFFLAGS=-pg
 
-LNFLAGS= $(PROFFLAGS)
-LNFLAGS+=  -Wl,--gc-sections
+LNFLAGS= $(PROFFLAGS) -lm
+#LNFLAGS+=  -Wl,-fPIC,-shared,-ffunction-sections,-fdata-sections,--gc-sections
 
 CFLAGS = $(PROFFLAGS) $(OPT) -Wall -I$(TOP)/src -I$(TOP)/dist/src
 
-OBJS=kanji_asm.o kanji_common.o kanji_exe.o kanji.o
+OBJS= syslib.o kanji_sys.o kanji_asm.o kanji_common.o kanji_exe.o kanji.o
 OP_HDRS=opcodes_str.h opcodes_tok.h
 
-all: kanji
+all:  kanji
 
 kanji: $(OP_HDRS) $(OBJS)
 	$(CC) -o $@ $(OBJS) $(LNFLAGS) 
 
+kanji_sys: kanji_sys.c
+	$(CC) -DSYS_MAIN $(CFLAGS) -o $@ kanji_sys.c
+
 opcodes_str.h: opcodes.lst
 	sort -u opcodes.lst | awk 'BEGIN { print "char *opcodes = " ; n=0 } \
-	                                 { if (n>0) print "\" \""; n=n+1; printf "\"%s\"",$$0} \
-	                             END { print ";"}' > opcodes_str.h
+	                                 { if (n>0) print "\"\\0\""; n=n+1; printf "\"%s\"",$$0} \
+	                             END { print ";" }' > opcodes_str.h
 
 opcodes_tok.h: opcodes.lst
-	sort -u opcodes.lst | awk 'BEGIN {n=1} \
-	                                 {printf "#define TOK_%s 0x%02X\n",$$0,n; n=n+1 } \
-	                             END {print "#define NUMOPCODES " n-1}' > opcodes_tok.h
+	sort -u opcodes.lst | awk 'BEGIN { n=1 } \
+	                                 { printf "#define TOK_%s 0x%02X\n",$$0,n; n=n+1 } \
+	                             END { print "#define NUMOPCODES " n-1 }' > opcodes_tok.h
+
+syslib.c: kanji_sys syslib/*.c
+	@rm -f kanji_syslib.c
+	@echo "#include \"val.h\"" > syslib.tmp
+	@for f in syslib/*.c; do \
+	   echo $$f; \
+	   echo "#line 1 \"$$f\"" >> syslib.tmp ; \
+		 cat $$f >> syslib.tmp ; \
+	done ;
+	sed -n 's/^ *val_t *\([a-zA-Z0-9.]*\).*/\1/p' syslib.tmp > syslib.fnc
+	sed    's/^ *val_t *\([a-zA-Z0-9]*\)\.\([a-zA-Z0-9]*\)/val_t sys_\1_\2/' syslib.tmp > syslib.c
+	sed    's/\([a-zA-Z0-9]*\)\.\([a-zA-Z0-9]*\)/val_t sys_\1_\2(val_t);/' syslib.fnc > syslib_fnc.h
+	./kanji_sys < syslib.fnc > syslib.tmp
+	sort syslib.tmp > syslib_lst.h
+	rm -f syslib.tmp syslib.fnc
 
 clean:
-	$(RM) *.o kanji kanji_parse.c kanji_parse.h kanji_parse.t $(OP_HDRS)
+	$(RM) *.o kanji_sys kanji kanji_parse.c kanji_parse.h kanji_parse.t $(OP_HDRS) syslib*.*

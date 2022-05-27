@@ -1,4 +1,5 @@
 #include "kanji.h"
+#include "kanji_sys.h"
 
 char *ERR_MSG[] = {
   "",
@@ -450,41 +451,42 @@ static char *arg_SHIFT(kaj_pgm_t pgm, uint32_t op, char *start, uint32_t op_alt)
 
 static char *arg_SYS(kaj_pgm_t pgm, uint32_t op, char *start)
 {
-  // SYS %02 %02
+  // SYS m.f %01 %02
   char *s = start;
   char *t = s;
-  uint32_t reg = 0;
-  uint32_t fnum = 0;
-
-  dbgtrc("1: %s",t);
-  if (skp(s, "'%'x?x W", &t)) {
-    reg = add_reg(pgm,s);
-    op |= reg << 8;
-  }
-  else throw(ERR_INVALID_REG,0);
+  uint64_t fnum = 0;
+  uint8_t reg1 = 0xFF;
+  uint8_t reg2 = 0xFF;
   
+ _dbgtrc("f: %s",t);
+  fnum = kaj_sys_encode(&t);
+  throwif(fnum == 0,ERR_INVALID_ARG,0);
+
+ _dbgtrc("f: %lX",fnum);
+
   s = t;
-  dbgtrc("2: %s",t);
+ _dbgtrc("1: %s",t);
   if (skp(s, "'%'x?x W", &t)) {
-    reg = add_reg(pgm,s);
-    op |= reg << 16;
-    add_long(pgm,op);
-    dbgtrc("2.1: %s",t);
-    return t;
+    reg1 = add_reg(pgm,s);
+  }
+  s = t;
+  reg2 = reg1;   
+ _dbgtrc("2: %s",t);
+  if (skp(s, "'%'x?x W", &t)) {
+    reg2 = add_reg(pgm,s);
   }
 
-  dbgtrc("3: %s",t);
-  if (skp(s, "+d W", &t)) {
-    fnum = strtol(s,NULL,10);
-  }
-  else if (skp(s, "$X W", &t)) {
-    fnum = strtol(s,NULL,16);
-  }
-  else throw(ERR_INVALID_ARG,0);
-
-  op  = (fnum << 16) | (reg << 8) | TOK_SY1;
+  // Setting the highest bit of TOK_SYS, signals that the
+  // argument is the (encoded) name of the function.
+  // the exec function will resolve the name into the
+  // actual function.
+  op  = (reg2 << 16)| (reg1 << 8) | (0x80 | TOK_SYS);
   add_long(pgm,op);
 
+  void *p = pgm->pgm+pgm->pgm_count;
+  add_long(pgm,0);
+  add_long(pgm,0);
+  memcpy(p,&fnum,8);
   return t;
 }
 
@@ -597,7 +599,6 @@ int32_t kaj_addline(kaj_pgm_t pgm, char *line)
         case TOK_STO : 
           t = arg_STO_CMP(pgm,op,t);
           break;
-                
         
         case TOK_JEQ :
         case TOK_JNE :

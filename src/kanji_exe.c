@@ -1,10 +1,42 @@
 #include "kanji.h"
+#include "kanji_sys.h"
+
+typedef val_t (*kaj_sys_f)(val_t);
+
+typedef struct {
+  int64_t fname;
+  kaj_sys_f fptr;
+} kaj_sys_t;
+
+#include "syslib_fnc.h"
+ 
+static kaj_sys_t kaj_syslst[] = {
+  #include "syslib_lst.h"
+}; 
+ 
+#define SYS_NUM (sizeof(kaj_syslst) / sizeof(kaj_sys_t))
 
 #define VAL_MAIN
 #include "val.h"
 
 #undef  TOK_HLT
 #define TOK_HLT 0x00
+
+static kaj_sys_f kaj_checkfname(int64_t fname)
+{
+  int i, j, m;
+
+  i = 0;
+  j = SYS_NUM-1;
+
+  while ( i<=j ){
+    m = (i+j)/2;
+    if (kaj_syslst[m].fname == fname) return kaj_syslst[m].fptr;
+    if (kaj_syslst[m].fname < fname) i=m+1;
+    else j = m-1;
+  }
+  return NULL;
+}
 
 int kaj_setreg(kaj_pgm_t pgm, uint8_t reg, val_t input)
 {
@@ -53,7 +85,8 @@ int kaj_init(kaj_pgm_t pgm, int32_t start, uint8_t reg, val_t input)
 {
   if (pgm->lst_type != LST_REGISTERS) return ERR_NOTASSEMBLED_PGM;
   if (reg > pgm->max_regs) return ERR_INVALID_REG;
-
+ 
+  dbgtrc("sys: %d",(int)SYS_NUM);
   pgm->pgm_count = pgm->max_pgm+1;  // reset pgm stack
   pgm->lst_count = pgm->max_regs+1; // reset regs stack
   pgm->cur_ln = start;
@@ -72,10 +105,16 @@ int kaj_step(kaj_pgm_t pgm)
 {
   uint32_t op;
   uint8_t reg;
+  int64_t fname;
+  kaj_sys_f fptr;
+  void *p;
+  int32_t n;
+  val_t v;
+  val_t r;
 
   op = pgm->pgm[pgm->cur_ln++];
   dbgtrc("STEP: %03X %08X",pgm->cur_ln-1,op);
-  switch(op & 0x7F) {
+  switch(op & 0xFF) {
 
     case TOK_HLT: return 0;
 
@@ -83,46 +122,36 @@ int kaj_step(kaj_pgm_t pgm)
       pgm->lst.regs[(op >> 8) & 0xFF] = pgm->lst.regs[(op >> 16) & 0xFF];
       break;
 
-    case TOK_ST2: {
-        int32_t n;
-        n = ((int32_t)op)>>16;
-        pgm->lst.regs[(op >> 8) & 0xFF] = val(n);
-       _dbgtrc("n2: %d -> %d",n,valtoint(pgm->lst.regs[(op >> 8) & 0xFF]));
-      }
+    case TOK_ST2: 
+      n = ((int32_t)op)>>16;
+      pgm->lst.regs[(op >> 8) & 0xFF] = val(n);
+     _dbgtrc("n2: %d -> %d",n,valtoint(pgm->lst.regs[(op >> 8) & 0xFF]));
       break;
 
-    case TOK_ST4: {
-        int32_t n = (int32_t)(pgm->pgm[pgm->cur_ln++]);
-        pgm->lst.regs[(op >> 8) & 0xFF] = val(n);
-       _dbgtrc("n: %d -> %d",n,valtoint(pgm->lst.regs[(op >> 8) & 0xFF]));
-      }
+    case TOK_ST4:
+      n = (int32_t)(pgm->pgm[pgm->cur_ln++]);
+      pgm->lst.regs[(op >> 8) & 0xFF] = val(n);
+     _dbgtrc("n: %d -> %d",n,valtoint(pgm->lst.regs[(op >> 8) & 0xFF]));
       break;
 
     case TOK_ST8:
-      { void *p;
-        p = &(pgm->lst.regs[(op >> 8) & 0xFF]);
-        memcpy(p, &(pgm->pgm[pgm->cur_ln]), 8);
-        pgm->cur_ln+=2;
-      }
+      p = &(pgm->lst.regs[(op >> 8) & 0xFF]);
+      memcpy(p, &(pgm->pgm[pgm->cur_ln]), 8);
+      pgm->cur_ln+=2;
       break;
 
     case TOK_STI:
-      { void *p;
-        p = &(pgm->lst.regs[(op >> 8) & 0xFF]);
-        int32_t n;
-        n = valtoint(pgm->lst.regs[(op & 0x00FF0000) >> 16]);
-        memcpy(p, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
-        pgm->cur_ln++;
-      }
+      p = &(pgm->lst.regs[(op >> 8) & 0xFF]);
+      n = valtoint(pgm->lst.regs[(op & 0x00FF0000) >> 16]);
+      memcpy(p, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
+      pgm->cur_ln++;
       break;
 
-    case TOK_STN: {
-        void *p;
-        p = &(pgm->lst.regs[(op >> 8) & 0xFF]);
-        int32_t n = op >> 16;
-        memcpy(p, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
-        pgm->cur_ln++;
-      }
+    case TOK_STN:
+      p = &(pgm->lst.regs[(op >> 8) & 0xFF]);
+      n = op >> 16;
+      memcpy(p, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
+      pgm->cur_ln++;
       break;
 
     case TOK_ADD:
@@ -157,17 +186,15 @@ int kaj_step(kaj_pgm_t pgm)
       pgm->lst.regs[(op >> 8) & 0xFF] = valxor(pgm->lst.regs[(op >> 16) & 0xFF],pgm->lst.regs[(op >> 24) & 0xFF]);
       break;
 
-    case TOK_INT: {
-        val_t v;
-        v = pgm->lst.regs[(op >> 16) & 0xFF];
-        if (valisdbl(v)) {
-          pgm->lst.regs[(op >> 8) & 0xFF] = val((int32_t)valtodbl(v));
-          break;
-        }
-        if (valisint(v)) {
-          pgm->lst.regs[(op >> 8) & 0xFF] = v;
-          break;
-        }
+    case TOK_INT: 
+      v = pgm->lst.regs[(op >> 16) & 0xFF];
+      if (valisdbl(v)) {
+        pgm->lst.regs[(op >> 8) & 0xFF] = val((int32_t)valtodbl(v));
+        break;
+      }
+      if (valisint(v)) {
+        pgm->lst.regs[(op >> 8) & 0xFF] = v;
+        break;
       }
       break;
 
@@ -179,107 +206,83 @@ int kaj_step(kaj_pgm_t pgm)
       pgm->lst.regs[(op >> 8) & 0xFF] = valneg(pgm->lst.regs[(op >> 16) & 0xFF]);
       break;
 
-    case TOK_FLT: {
-        val_t v;
-        v = pgm->lst.regs[(op >> 16) & 0xFF];
-        if (valisdbl(v)) {
-          pgm->lst.regs[(op >> 8) & 0xFF] = v;
-          break;
-        }
-        if (valisint(v)) {
-          pgm->lst.regs[(op >> 8) & 0xFF] = val((double)valtoint(v));
-          break;
-        }
+    case TOK_FLT:
+      v = pgm->lst.regs[(op >> 16) & 0xFF];
+      if (valisdbl(v)) {
+        pgm->lst.regs[(op >> 8) & 0xFF] = v;
+        break;
+      }
+      if (valisint(v)) {
+        pgm->lst.regs[(op >> 8) & 0xFF] = val((double)valtoint(v));
+        break;
       }
       break;
 
-    case TOK_INC: {
-        val_t v;
-        int32_t inc;
-        v = pgm->lst.regs[(op >> 8) & 0xFF];
-        inc = op >> 16;
-       _dbgtrc("inc: %d",inc);
-        if (valisdbl(v)) {
-          pgm->lst.regs[(op >> 8) & 0xFF] = val(valtodbl(v) + (double)inc);
-          break;
-        }
-        if (valisint(v)) {
-          pgm->lst.regs[(op >> 8) & 0xFF] = val(valtoint(v) + inc) ;
-          break;
-        }
+    case TOK_INC:
+      v = pgm->lst.regs[(op >> 8) & 0xFF];
+      n = op >> 16;
+      dbgtrc("inc: %d",n);
+      if (valisdbl(v)) {
+        pgm->lst.regs[(op >> 8) & 0xFF] = val(valtodbl(v) + (double)n);
+        break;
+      }
+      if (valisint(v)) {
+        pgm->lst.regs[(op >> 8) & 0xFF] = val(valtoint(v) + n) ;
+        break;
       }
       break;
 
-    case TOK_DEC: {
-        val_t v;
-        int32_t dec;
-        v = pgm->lst.regs[(op >> 8) & 0xFF];
-        dec = op >> 16;
-        if (valisdbl(v)) {
-          pgm->lst.regs[(op >> 8) & 0xFF] = val(valtodbl(v) - (double)dec);
-          break;
-        }
-        if (valisint(v)) {
-          pgm->lst.regs[(op >> 8) & 0xFF] = val(valtoint(v) - dec) ;
-          break;
-        }
+    case TOK_DEC: 
+      v = pgm->lst.regs[(op >> 8) & 0xFF];
+      n = op >> 16;
+      if (valisdbl(v)) {
+        pgm->lst.regs[(op >> 8) & 0xFF] = val(valtodbl(v) - (double)n);
+        break;
+      }
+      if (valisint(v)) {
+        pgm->lst.regs[(op >> 8) & 0xFF] = val(valtoint(v) - n) ;
+        break;
       }
       break;
 
-    case TOK_CMP: {
-        int n;
-        n = valcmp(pgm->lst.regs[(op >> 8) & 0xFF], pgm->lst.regs[(op >> 16) & 0xFF]);
-        pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
-      }
+    case TOK_CMP: 
+      n = valcmp(pgm->lst.regs[(op >> 8) & 0xFF], pgm->lst.regs[(op >> 16) & 0xFF]);
+      pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
       break;
 
-    case TOK_CP2: {
-        int n;
-        n = valcmp(pgm->lst.regs[(op >> 8) & 0xFF], val(((int32_t)op) >> 16));
-        pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
-      }
+    case TOK_CP2: 
+      n = valcmp(pgm->lst.regs[(op >> 8) & 0xFF], val(((int32_t)op) >> 16));
+      pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
       break;
 
-    case TOK_CP4: {
-        int n;
-        n = valcmp(pgm->lst.regs[(op >> 8) & 0xFF], val((int32_t)(pgm->pgm[pgm->cur_ln++])));
-        pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
-      }
+    case TOK_CP4:
+      n = valcmp(pgm->lst.regs[(op >> 8) & 0xFF], val((int32_t)(pgm->pgm[pgm->cur_ln++])));
+      pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
       break;
 
     case TOK_CP8:
-      {
-        int n;
-        val_t v;
-        memcpy(&v, &(pgm->pgm[pgm->cur_ln]), 8);
-        n = valcmp( pgm->lst.regs[(op >> 8) & 0xFF], v);
-        pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
-        pgm->cur_ln+=2;
-      }
+      memcpy(&v, &(pgm->pgm[pgm->cur_ln]), 8);
+      n = valcmp( pgm->lst.regs[(op >> 8) & 0xFF], v);
+      pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
+      pgm->cur_ln+=2;
       break;
 
     case TOK_CPI:
-      { val_t v;
-        int32_t n;
-        n = valtoint(pgm->lst.regs[(op & 0x00FF0000) >> 16]);
-        memcpy(&v, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
-       _dbgtrc("R: %lX, V: %lX",pgm->lst.regs[(op >> 8) & 0xFF],*(uint64_t *)(pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2)));
-        n = valcmp( pgm->lst.regs[(op >> 8) & 0xFF], v);
-        pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
-        pgm->cur_ln++;
-      }
+      n = valtoint(pgm->lst.regs[(op & 0x00FF0000) >> 16]);
+      memcpy(&v, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
+     _dbgtrc("R: %lX, V: %lX",pgm->lst.regs[(op >> 8) & 0xFF],*(uint64_t *)(pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2)));
+      n = valcmp( pgm->lst.regs[(op >> 8) & 0xFF], v);
+      pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
+      pgm->cur_ln++;
       break;
 
     case TOK_CPN:
-      { val_t v;
-        int32_t n;
-        n = op >> 16;
-        memcpy(&v, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
-       _dbgtrc("R: %lX, V: %lX",pgm->lst.regs[(op >> 8) & 0xFF],*(uint64_t *)(pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2)));
-        n = valcmp( pgm->lst.regs[(op >> 8) & 0xFF], v);
-        pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
-        pgm->cur_ln++;
-      }
+      n = op >> 16;
+      memcpy(&v, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
+     _dbgtrc("R: %lX, V: %lX",pgm->lst.regs[(op >> 8) & 0xFF],*(uint64_t *)(pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2)));
+      n = valcmp( pgm->lst.regs[(op >> 8) & 0xFF], v);
+      pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
+      pgm->cur_ln++;
       break;
 
     case TOK_DTA:
@@ -345,25 +348,21 @@ int kaj_step(kaj_pgm_t pgm)
       break;
 
     case TOK_JSR:
-      {
-        uint32_t arr = 0;
-        val_t in;
-
-        arr = pgm->pgm[pgm->cur_ln++];
+      n = (int32_t)(pgm->pgm[pgm->cur_ln++]);
        
-        reg = arr & 0xFF;
-        dbgtrc("arr: %08X",arr);
-        if ((arr & 0xFF00) != 0xFF00)
-          in = pgm->lst.regs[(arr >> 8) & 0xFF];
-        else in = valnil;
+      reg = n & 0xFF;
+      dbgtrc("arr: %08X",n);
+      if ((n & 0xFF00) != 0xFF00)
+        v = pgm->lst.regs[(n >> 8) & 0xFF];
+      else v = valnil;
 
-        dbgtrc("%d %d %lX",pgm->cur_ln,reg,in);
+      dbgtrc("%d %d %lX",pgm->cur_ln,reg,v);
         
-        start_JSR(pgm, reg, in);
+      start_JSR(pgm, reg, v);
  
-        dbgtrc("pgm stack: -1 %08X\n                 -2 %08X\n                 -3 %08X",pgm->pgm[pgm->pgm_count-1],pgm->pgm[pgm->pgm_count-2],pgm->pgm[pgm->pgm_count-3]);
-        pgm->cur_ln = op>>8;
-      }
+      dbgtrc("pgm stack: -1 %08X\n                 -2 %08X\n                 -3 %08X",pgm->pgm[pgm->pgm_count-1],pgm->pgm[pgm->pgm_count-2],pgm->pgm[pgm->pgm_count-3]);
+      pgm->cur_ln = op>>8;
+      
       break;
 
     case TOK_BSR: {
@@ -396,18 +395,14 @@ int kaj_step(kaj_pgm_t pgm)
       memcpy(&(pgm->pgm[pgm->pgm_count-2]), &(pgm->lst.regs[reg]),8);
       break;
 
-    case TOK_RT2: {
-        val_t v;
-        v = val(((int32_t)op)>>16);
-        memcpy( &(pgm->pgm[pgm->pgm_count-2]), &v, 8);
-      }
+    case TOK_RT2: 
+      v = val(((int32_t)op)>>16);
+      memcpy( &(pgm->pgm[pgm->pgm_count-2]), &v, 8);
       break;
 
-    case TOK_RT4: {
-        val_t v;
-        v = val((int32_t)(pgm->pgm[pgm->cur_ln++]));
-        memcpy( &(pgm->pgm[pgm->pgm_count-2]), &v, 8);
-      }
+    case TOK_RT4:
+      v = val((int32_t)(pgm->pgm[pgm->cur_ln++]));
+      memcpy( &(pgm->pgm[pgm->pgm_count-2]), &v, 8);
       break;
 
     case TOK_RT8:
@@ -415,19 +410,16 @@ int kaj_step(kaj_pgm_t pgm)
       pgm->cur_ln+=2;
       break;
 
-    case TOK_RTI: {
-        int32_t n = 0;
-        n = valtoint(pgm->lst.regs[(op & 0x00FF0000) >> 16]);
-        memcpy( &(pgm->pgm[pgm->pgm_count-2]), pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
-        pgm->cur_ln++;
-      }
+    case TOK_RTI:
+      n = valtoint(pgm->lst.regs[(op & 0x00FF0000) >> 16]);
+      memcpy( &(pgm->pgm[pgm->pgm_count-2]), pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
+      pgm->cur_ln++;
       break;
 
-    case TOK_RTN: {
-        int32_t n = op >> 16;
-        memcpy( &(pgm->pgm[pgm->pgm_count-2]), pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
-        pgm->cur_ln++;
-      }
+    case TOK_RTN:
+      n = op >> 16;
+      memcpy( &(pgm->pgm[pgm->pgm_count-2]), pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
+      pgm->cur_ln++;
       break;
 
     case TOK_NOP:
@@ -451,6 +443,31 @@ int kaj_step(kaj_pgm_t pgm)
         pgm->lst.regs[reg] = pgm->lst.regs[--pgm->lst_count];
       }
       break;
+ 
+     case 0x80 | TOK_SYS:
+        p = &(pgm->pgm[pgm->cur_ln]);
+
+        memcpy(&fname,p,8);
+        fptr = kaj_checkfname(fname);
+        dbgtrc("SYS: f: %lX (%s) -> %p",fname, kaj_sys_decode(fname), (void *)fptr);
+        if (fptr == NULL) { fprintf(stderr, "Unknown function: %s\n",kaj_sys_decode(fname)); abort();}
+        pgm->pgm[pgm->cur_ln-1] &= 0xFFFFFF7F;
+        memcpy(p,&fptr,8);
+
+    case TOK_SYS:
+        p = &(pgm->pgm[pgm->cur_ln]);
+        memcpy(&fptr,p,8);
+        r = valnil;
+        v = valnil;
+        if ((pgm->pgm[pgm->cur_ln-1] & 0xFF0000) != 0xFF0000) {
+          v = pgm->lst.regs[(pgm->pgm[pgm->cur_ln-1] & 0xFF0000) >> 16];
+        }
+        r = fptr(v);
+        if ((pgm->pgm[pgm->cur_ln-1] & 0xFF00) != 0xFF00) {
+          pgm->lst.regs[(pgm->pgm[pgm->cur_ln-1] & 0xFF00) >> 8] = r;
+        }
+        pgm->cur_ln += 2;
+        break;
 
     default: pgm->cur_ln += (kaj_opcode_len(op)-1);
 
