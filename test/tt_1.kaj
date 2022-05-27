@@ -1,0 +1,32 @@
+; test 1
+     STO %01 1
+     NEG %01 %01
+     NOT %01 %01
+     INC %01 12
+     JSR @04 %03
+     JNE @02
+     JSR @04 %03
+     STO %05 @01
+@01: STO %00 -11.65345
+     STO %01 -1
+     STO %05 @1
+     JMP %05
+@02: STO %02 100000
+     CMP %00 %02
+     CMP %02 3
+     CMP %05 3.21
+     CMP %06 @01
+     STO %01 3
+     STO %02 5
+     ADD %00 %01 %02
+;    JEQ %01
+;    JMP $23
+;    STO %03 %08
+     HLT 
+@04: SAV %01
+     ARG %01
+     ASR %01 %02 %0C ; Signed shift right by R[12]
+     ASR %01 %02 $0C ; Signed shift right by 12 bits
+     RTV %01
+     RCL %01
+     RET

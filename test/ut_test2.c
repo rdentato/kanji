@@ -15,9 +15,9 @@ int main(int argc, char *argv[])
 
   dbgtst("xx") {
     x = val("pippo");
-    dbgchk(valisbuf(x),"x: %lX",x);
-    dbgchk(valsize(x) >= 6);
-    dbgchk(valcount(x) == 6);
+    dbgchk(valisstr(x),"x: %lX",x);
+    dbgchk(valsize(x) == 6);
+    dbgchk(valcount(x) == 5);
     valfree(x);
   }
 

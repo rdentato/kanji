@@ -1,0 +1,7 @@
+     STO %1 2
+     STO %2 3
+     SAV %1 %2
+     RCL %2 %1
+     SUB %0 %1 %2
+     RTV %0
+     RET

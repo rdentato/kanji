@@ -1,0 +1,10 @@
+     STO %3 @2
+     JMP %3
+     STO %1 20
+     STO %2 20
+     CMP %2 %1
+     JGT @2
+     STO %3 200
+@2: 
+     RTV %3
+     RET

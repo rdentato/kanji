@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
   }
   
   dbgtst("Set to a not vec") {
-    dbgchk(valset(val(0),val(1),val(3.4)) == valerror);
+    dbgchk(valset(val(0),val(1),val(3.4)) == valnil);
   }
 
   dbgtst("Set/get to a vec") {
@@ -33,13 +33,13 @@ int main(int argc, char *argv[])
     v = valvec(100);
     ret = valset(v,val(1),val(2.3));
     dbgchk(ret > 0);
-    x = valget(v,1);
+    x = valget(v,val(1));
     dbgchk(valisdbl(x));
     dbginf("v[1] = %g",valtodbl(x));
     ret = valset(v,val(230),val(23));
     dbgchk(valtoint(ret) > 0);
     dbgchk(valsize(v) >= 230);
-    x = valget(v,230);
+    x = valget(v,val(230));
     dbgchk(valisint(x));
 
     valfree(v);
@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
     dbgchk(n==1,"n: %X (%d)",n,valtoint(n));
     x = valtop(stack);
     dbgchk(valisint(x),"x=0x%lx",x);
-    dbgchk(valtoint(x) == 2);
+    dbgchk(valtoint(x) == 2,"%lX",x);
     valfree(stack);
   }
 
