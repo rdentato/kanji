@@ -1,0 +1,11 @@
+  
+    STO %3 0
+@2: STO %4 @1[%3]
+    SYS io.print %1 %4   ; print value
+    INC %3
+    CMP %4 @3[0]
+    JNE @2
+
+@1: VAL "RIGHT\n"
+    VAL "LEFT\n"
+@3: VAL "STOP\n"

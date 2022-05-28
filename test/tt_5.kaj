@@ -6,4 +6,6 @@
       STO %1 3
 @10 : 
       RTV %1
+      SYS io.print %3 %01
+      SYS io.print %3 %3
       RET
