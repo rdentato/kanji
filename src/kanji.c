@@ -28,6 +28,8 @@ int main(int argc, char *argv[])
        dbgtrc("RET: (int) %d",valtoint(ret));
     else if (valisdbl(ret))
        dbgtrc("RET: (double) %g",valtodbl(ret));
+    else if (valisstr(ret))
+       dbgtrc("RET: (str) %s",(char *)valtoptr(ret));
     else if (valisptr(ret))
        dbgtrc("RET: (ptr) %p",valtoptr(ret));
     else dbgtrc("RET: %lX",ret);
