@@ -175,6 +175,9 @@ int32_t valsize(val_t v);
   val_t valxor(val_t a, val_t b);
   val_t valnot(val_t a);
   val_t valneg(val_t a);
+  val_t valasr(val_t a, val_t n);
+  val_t valshr(val_t a, val_t n);
+  val_t valshl(val_t a, val_t n);
 
 #ifdef VAL_MAIN
 
@@ -291,6 +294,36 @@ val_t valneg(val_t a)
 {
   if (valisdbl(a)) return val(valtodbl(a) * -1.0);
   if (valisint(a)) return val(valtoint(a) * -1);
+  return a;
+}
+
+val_t valshl(val_t a, val_t n)
+{
+  int k;
+  if (!valisint(n)) return a;
+  k = valtoint(n);
+  if (valisdbl(a)) return val(((int32_t)valtodbl(a)) << k);
+  if (valisint(a)) return val(valtoint(a) << k);
+  return a;
+}
+
+val_t valshr(val_t a, val_t n)
+{
+  int k;
+  if (!valisint(n)) return a;
+  k = valtoint(n);
+  if (valisdbl(a)) return val(((uint32_t)valtodbl(a)) >> k);
+  if (valisint(a)) return val(((uint32_t)valtoint(a)) >> k);
+  return a;
+}
+
+val_t valasr(val_t a, val_t n)
+{
+  int k;
+  if (!valisint(n)) return a;
+  k = valtoint(n);
+  if (valisdbl(a)) return val(((int32_t)valtodbl(a)) >> k);
+  if (valisint(a)) return val(((int32_t)valtoint(a)) >> k);
   return a;
 }
 

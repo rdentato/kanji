@@ -196,6 +196,30 @@ int kaj_step(kaj_pgm_t pgm)
       pgm->lst.regs[(op >> 8) & 0xFF] = valxor(pgm->lst.regs[(op >> 16) & 0xFF],pgm->lst.regs[(op >> 24) & 0xFF]);
       break;
 
+    case TOK_SHL:
+      pgm->lst.regs[(op >> 8) & 0xFF] = valshl(pgm->lst.regs[(op >> 16) & 0xFF],pgm->lst.regs[(op >> 24) & 0xFF]);
+      break;
+
+    case TOK_SL1:
+      pgm->lst.regs[(op >> 8) & 0xFF] = valshl(pgm->lst.regs[(op >> 16) & 0xFF], val((op >> 24) & 0xFF));
+      break;
+
+    case TOK_SHR:
+      pgm->lst.regs[(op >> 8) & 0xFF] = valshr(pgm->lst.regs[(op >> 16) & 0xFF],pgm->lst.regs[(op >> 24) & 0xFF]);
+      break;
+
+    case TOK_SR1:
+      pgm->lst.regs[(op >> 8) & 0xFF] = valshr(pgm->lst.regs[(op >> 16) & 0xFF], val((op >> 24) & 0xFF));
+      break;
+
+    case TOK_ASR:
+      pgm->lst.regs[(op >> 8) & 0xFF] = valasr(pgm->lst.regs[(op >> 16) & 0xFF],pgm->lst.regs[(op >> 24) & 0xFF]);
+      break;
+
+    case TOK_AR1:
+      pgm->lst.regs[(op >> 8) & 0xFF] = valasr(pgm->lst.regs[(op >> 16) & 0xFF], val((op >> 24) & 0xFF));
+      break;
+
     case TOK_INT: 
       v = pgm->lst.regs[(op >> 16) & 0xFF];
       if (valisdbl(v)) {

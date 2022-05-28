@@ -131,5 +131,25 @@ a single value (you can use a vector to pass, return multiple values)
   JSR 
 ```
 
-## C functions
+## Calling C functions
+
+You can add C functions to be called by a kanji program. To do so,
+you put an interface file in the `syslib` directory and rebuild the
+interpreter.
+
+For example, to use the `sin()` function the `math.c` file has the
+interface:
+
+```
+val_t mth.sin(val_t arg)
+{
+  if (valisdbl(arg)) return val(sin(valtodbl(arg)));
+  return valnil;
+}
+```
+
+Each function takes a single argument and returns a single argument.
+
+The function name is case insentive, may contain only letters, numbers 
+and a mandatory dot (`.`). It can't be longer than 12 characters (dot included).
 

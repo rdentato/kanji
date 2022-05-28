@@ -17,12 +17,15 @@ LNFLAGS+=-s -Wl,--gc-sections
 
 CFLAGS = $(PROFFLAGS) $(OPT) -Wall -I$(TOP)/src -I$(TOP)/dist/src
 
-OBJS= syslib.o kanji_sys.o kanji_asm.o kanji_common.o kanji_exe.o kanji.o
+OBJS = syslib.o kanji_sys.o kanji_common.o kanji_exe.o 
 OP_HDRS=opcodes_str.h opcodes_tok.h
 
 all:  kanji
 
-kanji: $(OP_HDRS) $(OBJS)
+kanji: $(OP_HDRS) $(OBJS) kanji_asm.o kanji.o
+	$(CC) -o $@ $(OBJS) kanji_asm.o kanji.o $(LNFLAGS) 
+
+kanji_run: $(OP_HDRS) $(OBJS)
 	$(CC) -o $@ $(OBJS) $(LNFLAGS) 
 
 kanji_sys: kanji_sys.c
