@@ -96,4 +96,9 @@ void kaj_dump(kaj_pgm_t pgm, FILE *f)
     //printf("%06X  %02X %02X %02X %02X\n", k, bytes[3], bytes[2], bytes[1], bytes[0]);
     fprintf(stderr,"%06X  %02X %02X %02X %02X\n", k, bytes[0], bytes[1], bytes[2], bytes[3]);
   }
+  for (int32_t k=0; k<pgm->str_count; k++) {
+    if (k % 8 == 0) fprintf(stderr,"\n%06X ",k);
+    fprintf(stderr," %02X",pgm->str[k]);
+  }
+  fputc('\n',stderr);
 }
