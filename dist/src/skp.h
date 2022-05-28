@@ -408,8 +408,8 @@ static int match(char *pat, char *src, char **pat_end, char **src_end,int *flg)
       case 'w' : W(is_blank(s_chr));  break;
       case 'c' : W(is_ctrl(s_chr));   break;
       case 'i' : W(is_idchr(s_chr));  break;
+      case '@' : W(is_alnum(s_chr));  break;
       
-      case '@' : /* <- @ is deprecated, will be removed */
       case '&' : ret = match_not? MATCHED_GOALNOT : MATCHED_GOAL;
                  break;
 
