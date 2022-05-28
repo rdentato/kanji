@@ -488,28 +488,60 @@ int kaj_step(kaj_pgm_t pgm)
       break;
  
      case 0x80 | TOK_SYS:
-        p = &(pgm->pgm[pgm->cur_ln]);
-        memcpy(&fname,p,8);
-        fptr = kaj_checkfname(fname);
-       _dbgtrc("SYS: f: %lX (%s) -> %p",fname, kaj_sys_decode(fname), (void *)fptr);
-        if (fptr == NULL) { fprintf(stderr, "Unknown function: %s\n",kaj_sys_decode(fname)); abort();}
-        pgm->pgm[pgm->cur_ln-1] &= 0xFFFFFF7F;
-        memcpy(p,&fptr,8);
+       p = &(pgm->pgm[pgm->cur_ln]);
+       memcpy(&fname,p,8);
+       fptr = kaj_checkfname(fname);
+      _dbgtrc("SYS: f: %lX (%s) -> %p",fname, kaj_sys_decode(fname), (void *)fptr);
+       if (fptr == NULL) { fprintf(stderr, "Unknown function: %s\n",kaj_sys_decode(fname)); abort();}
+       pgm->pgm[pgm->cur_ln-1] &= 0xFFFFFF7F;
+       memcpy(p,&fptr,8);
 
     case TOK_SYS:
-        p = &(pgm->pgm[pgm->cur_ln]);
-        memcpy(&fptr,p,8);
+       p = &(pgm->pgm[pgm->cur_ln]);
+       memcpy(&fptr,p,8);
 
-        v = valnil;
-        if ((pgm->pgm[pgm->cur_ln-1] & 0xFF0000) != 0xFF0000) 
-          v = pgm->lst.regs[(pgm->pgm[pgm->cur_ln-1] & 0xFF0000) >> 16];
+       v = valnil;
+       if ((pgm->pgm[pgm->cur_ln-1] & 0xFF0000) != 0xFF0000) 
+         v = pgm->lst.regs[(pgm->pgm[pgm->cur_ln-1] & 0xFF0000) >> 16];
         
-        r = fptr(v);
-        if ((pgm->pgm[pgm->cur_ln-1] & 0xFF00) != 0xFF00) 
-          pgm->lst.regs[(pgm->pgm[pgm->cur_ln-1] & 0xFF00) >> 8] = r;
+       r = fptr(v);
+       if ((pgm->pgm[pgm->cur_ln-1] & 0xFF00) != 0xFF00) 
+         pgm->lst.regs[(pgm->pgm[pgm->cur_ln-1] & 0xFF00) >> 8] = r;
         
-        pgm->cur_ln += 2;
-        break;
+       pgm->cur_ln += 2;
+       break;
+
+    case TOK_VEC:
+      reg = (op >> 8) & 0xFF; 
+      pgm->lst.regs[reg] = valvec(((uint32_t)op) >> 16);
+      break;
+
+    case TOK_KLL:
+      reg = (op >> 8) & 0xFF; 
+      valfree(pgm->lst.regs[reg]);
+      pgm->lst.regs[reg] = valnil;
+      break;
+
+    case TOK_SET:
+      valset(pgm->lst.regs[(op >> 8) & 0xFF],pgm->lst.regs[(op >> 16) & 0xFF],pgm->lst.regs[(op >> 24) & 0xFF]);
+      break;
+
+    case TOK_GET:
+      v = valget(pgm->lst.regs[(op >> 16) & 0xFF],pgm->lst.regs[(op >> 24) & 0xFF]);
+      pgm->lst.regs[(op >> 8) & 0xFF] = v;
+      break;
+
+    case TOK_LEN:
+      reg = (op >> 8) & 0xFF; 
+      n = valcount(pgm->lst.regs[(op >> 16) & 0xFF]);
+      dbgtrc("LEN: %d",n);
+      pgm->lst.regs[reg] = val(n);
+      break;
+
+    case TOK_SZE:
+      reg = (op >> 8) & 0xFF; 
+      pgm->lst.regs[reg] = val(valsize(pgm->lst.regs[(op >> 16) & 0xFF]));
+      break;
 
     default: pgm->cur_ln += (kaj_opcode_len(op)-1);
 

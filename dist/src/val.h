@@ -367,7 +367,7 @@ static int val_makeroom(val_info_t vv, int32_t i, int32_t esz)
       new_sz += prv_sz;
       prv_sz  = tmp_sz;
     }
-    dbgtrc("i: %d prv: %d new: %d",i,vv->size, new_sz);
+   _dbgtrc("i: %d prv: %d new: %d",i,vv->size, new_sz);
 
     new_arr = realloc(vv->arr, new_sz * esz);
     if (new_arr == NULL) return 0; // ERR
@@ -413,6 +413,7 @@ int32_t valsize(val_t v)
 int32_t valcount(val_t v)
 {
   val_info_t vv = valtoptr(v);
+  dbgtrc("CNT: %X", VALTYPE(v));
   switch (VALTYPE(v)) {
     case VALSTR: return vv ? strlen((char *)vv):0;
 

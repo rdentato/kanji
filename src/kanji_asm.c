@@ -607,6 +607,28 @@ static char *arg_VAL(kaj_pgm_t pgm, uint32_t op, char *start)
   return t;
 }
 
+static char *arg_VEC(kaj_pgm_t pgm, uint32_t op, char *start)
+{
+  char *s = start;
+  char *t = s;
+  uint32_t reg;
+
+  if (!skp(s, "'%'x?x W", &t)) throw(ERR_INVALID_REG,0);
+
+  reg = add_reg(pgm,s);
+  op |= reg << 8;
+  s = t;
+ 
+  int32_t n = -1;
+
+  if (skp(s,"'$'x?x W",&t))  n = strtol(s+1,NULL,16);
+  else if (skp(s,"+d W",&t))  n = strtol(s,NULL,10);
+  if (n <= 0) n = 16;
+ 
+  add_long(pgm, ((n << 16) | op));
+  return t;
+}
+
 int32_t kaj_addline(kaj_pgm_t pgm, char *line)
 {
   char *s = line;
@@ -665,6 +687,8 @@ int32_t kaj_addline(kaj_pgm_t pgm, char *line)
         case TOK_AND :
         case TOK_ORR :
         case TOK_XOR :
+        case TOK_SET :
+        case TOK_GET :
           t = arg_3_regs(pgm,op,t);
           break;
 
@@ -677,10 +701,13 @@ int32_t kaj_addline(kaj_pgm_t pgm, char *line)
           t = arg_S_C_R(pgm,op,t,t,TOK_RT2,TOK_RT4,TOK_RT8,TOK_RTI,TOK_RTN);
           break;
 
+        case TOK_KLL :
         case TOK_ARG :
           t = arg_1_regs(pgm,op,t);
           break;
 
+        case TOK_LEN :
+        case TOK_SZE :
         case TOK_INT :
         case TOK_FLT :
         case TOK_NOT :
@@ -726,6 +753,10 @@ int32_t kaj_addline(kaj_pgm_t pgm, char *line)
 
         case TOK_VAL:
           t = arg_VAL(pgm,op,t);
+          break;
+
+        case TOK_VEC:
+          t = arg_VEC(pgm,op,t);
           break;
 
         default: throw(ERR_SYNTAX);
