@@ -97,6 +97,32 @@ static void add_val(kaj_pgm_t pgm,val_t v)
   pgm->pgm_count += 2;
 }
 
+static void add_str(kaj_pgm_t pgm, char *s, int32_t n)
+{
+  val_t v;
+
+  v = valconst(STR_OFFSET,pgm->str_count);
+  str_makeroom(pgm,n+1);
+
+  s++;
+  char c;
+  while (*s != '"') {
+    c = *s++;
+    if (c == '\\') {
+      c = *s++;
+      switch (c) {
+        case 'n' : c = '\n'; break;
+        case 'r' : c = '\r'; break;
+        case '0' : c = '\0'; break;
+        default  : break;
+      }
+    }
+    pgm->str[pgm->str_count++] = c;
+  }
+  pgm->str[pgm->str_count++] = '\0';
+  add_val(pgm,v);
+}
+
 static uint32_t check_opcode(kaj_pgm_t pgm, char *op)
 {
    char candidate_op[4];
@@ -151,6 +177,14 @@ static char *arg_S_C_R(kaj_pgm_t pgm, uint32_t op, char *s, char *start, uint8_t
     op = (op & 0xFF00) | op8;
     add_long(pgm,op);
     add_val(pgm,v);
+    return t;
+  }
+
+  if ((*s == '"') && skp(s,"Q",&t)) {
+    op = (op & 0xFF00) | op8;
+    add_long(pgm,op);
+    add_str(pgm,s,(int32_t)(t-s)-2);
+    skp(t,"W",&t);
     return t;
   }
 
@@ -555,26 +589,7 @@ static char *arg_VAL(kaj_pgm_t pgm, uint32_t op, char *start)
   }
 
   if (*s == '"' && skp(s,"Q",&t)) {
-    v = valconst(STR_OFFSET,pgm->str_count);
-    add_val(pgm,v);
-    n = (int)(t-s)-2;
-    str_makeroom(pgm,n+1);
-
-    s++;
-    char c;
-    while (*s != '"') {
-      c = *s++;
-      if (c == '\\') {
-        c = *s++;
-        switch (c) {
-          case 'n' : c = '\n'; break;
-          case 'r' : c = '\r'; break;
-          case '0' : c = '\0'; break;
-        }
-      }
-      pgm->str[pgm->str_count++] = c;
-    }
-    pgm->str[pgm->str_count++] = '\0';
+    add_str(pgm, s, (int32_t)(t-s)-2);
     skp(t,"W",&t);
     return t; 
   }
