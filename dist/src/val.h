@@ -39,26 +39,22 @@ typedef uint64_t val_t;
 #define VAL_INTTYPE   0xFFFFFFFF00000000llu
 #define VAL_BOLTYPE   0xFFFFFFFFFFFFFFFEllu
 
-#define valfalse      0x7FFE800000000000llu
-#define valtrue       0x7FFE800000000001llu
-#define valnil        0x7FFE400000000000llu
-#define valempty      0x7FFE100000000002llu
-#define valOK         0x7FFE100000000003llu
-#define valerror      0x7FFE1000FFFFFFFFllu
+#define valfalse         0x7FFE800000000000llu
+#define valtrue          0x7FFE800000000001llu
+#define valnil           0x7FFE400000000000llu
+#define valempty         0x7FFE100000000002llu
+#define valOK            0x7FFE100000000003llu
+#define valerror         0x7FFE1000FFFFFFFFllu
 
-#define valconst(x)  (0x7FFE000100000000llu | (uint32_t)(x))
-#define valmark(x)   (0x7FFE000200000000llu | (uint32_t)(x))
-#define valauxint(x) (0x7FFE000300000000llu | (uint32_t)(x))
-#define valextint(x) (0x7FFE000400000000llu | (uint32_t)(x))
-#define valrefint(x) (0x7FFE000500000000llu | (uint32_t)(x))
-#define valenum(x)   (0x7FFE000600000000llu | (uint32_t)(x))
+#define valconst(n,x)   (0x7FFE200000000000llu | ((uint64_t)((n) & 0xF)) << 32 | (uint32_t)(x))
+#define valisconst(n,x) (((x) & VAL_INTTYPE) == valconst(n,0))
 
-#define VAL_INT       0x7FFE000000000000llu
-#define VAL_PTR       0x7FFF000000000000llu
-#define VAL_MAP       0xFFFC000000000000llu
-#define VAL_VEC       0xFFFD000000000000llu
-#define VAL_BUF       0xFFFE000000000000llu
-#define VAL_STR       0xFFFF000000000000llu
+#define VAL_INT          0x7FFE000000000000llu
+#define VAL_PTR          0x7FFF000000000000llu
+#define VAL_MAP          0xFFFC000000000000llu
+#define VAL_VEC          0xFFFD000000000000llu
+#define VAL_BUF          0xFFFE000000000000llu
+#define VAL_STR          0xFFFF000000000000llu
 
 #define VAL_argcnt(x1,x2,x3,x4,xN, ...) xN
 #define VAL_argn(...)       VAL_argcnt(__VA_ARGS__,4,3,2,1,0)
@@ -137,7 +133,7 @@ static inline val_t val_fromstr(void *v)             { return VAL_STR | ((uintpt
   val_t valbuf(int32_t sz);
 
   val_t valset(val_t v, val_t i, val_t x);
-  val_t valget(val_t v, int32_t i);
+  val_t valget(val_t v, val_t i);
   val_t valpush(val_t v, val_t x);
 
 #define valdrop(...) VAL_varargs(val_drop,__VA_ARGS__)
@@ -338,7 +334,7 @@ static int val_makeroom(val_info_t vv, int32_t i, int32_t esz)
       new_sz += prv_sz;
       prv_sz  = tmp_sz;
     }
-    // dbgtrc("i: %d prv: %d new: %d",i,vv->size, new_sz);
+    dbgtrc("i: %d prv: %d new: %d",i,vv->size, new_sz);
 
     new_arr = realloc(vv->arr, new_sz * esz);
     if (new_arr == NULL) return 0; // ERR
@@ -369,23 +365,27 @@ int32_t valsize(val_t v)
 {
   val_info_t vv;
   dbgtrc("TYPE: %X",VALTYPE(v));
+  vv = valtoptr(v);
   switch(VALTYPE(v)) {
+    case VALSTR: return vv ?strlen((char *)vv)+1:0;
+
     case VALBUF: 
-    case VALVEC: vv = valtoptr(v);
-                 return vv ? vv->size : 0;
+    case VALVEC: return vv ? vv->size : 0;
                  
-    default: dbgtrc("SZ OF: %lX",v);
+    default: dbgtrc("SZE OF: %lX",v);
   }
   return 0;
 }
 
 int32_t valcount(val_t v)
 {
+  val_info_t vv = valtoptr(v);
   switch (VALTYPE(v)) {
+    case VALSTR: return vv ? strlen((char *)vv):0;
+
     case VALBUF:
-    case VALVEC: { val_info_t vv = valtoptr(v);
-                   return vv ? vv->count - vv->first : 0;
-                 }
+    case VALVEC: return vv ? vv->count - vv->first : 0;
+    default: dbgtrc("CNT OF: %lX",v);
   }
   return 0;
 }
@@ -438,63 +438,56 @@ char *valtostr(val_t v)
 val_t valset(val_t v, val_t i, val_t x)
 { 
   int32_t ii = -1;
-  // dbgtrc("%X",VALTYPE(v));
+  int32_t size  = 1;
+  int32_t first = 0;
+
+ _dbgtrc("SET %X",VALTYPE(v));
+  val_info_t vv;
+
+  if ((vv = valtoptr(v)) == NULL) return valnil;
+
+  if (valisint(i)) ii = valtoint(i);
+  else if (i == valnil) ii = -1;
+  else return valnil;
+  
+  if (ii < 0) ii = vv->count;
+ _dbgtrc("SET i: %d",ii);
+
   switch (VALTYPE(v)) {
-    case VALBUF: { val_info_t vv;
-                   if ((vv = valtoptr(v)) == NULL) return valerror;
-                  
-                   if (valisint(i)) ii = valtoint(i);
-                   else if (i == valnil) ii = -1;
-                   else return valerror;
-                    
-                   if (ii < 0) ii = vv->count;
-                   // dbgtrc("valset [%d]",ii);
-                   if (val_makeroom(vv,ii+4+1,1)) {
-                     char *s = (char *)(vv->arr);
-                     uint32_t ch = (uint32_t)valtoint(x);
 
-                     if (ch && 0xFF000000) s[ii++] = (ch >> 24) & 0xFF;
-                     if (ch && 0x00FF0000) s[ii++] = (ch >> 16) & 0xFF;
-                     if (ch && 0x0000FF00) s[ii++] = (ch >> 8) & 0xFF;
-                     s[ii++] = ch & 0xFF;
-                     if (ii >= vv->count) { 
-                       vv->count=ii+1;
-                       s[vv->count] = '\0';
-                     }
-                     return val(vv->count);
-                   }
-                 }
-                 break;
+    case VALVEC: size = sizeof(val_t); 
+                 first = vv->first;
 
-    case VALVEC: { val_info_t vv;
-                   if ((vv = valtoptr(v)) == NULL) return valerror;
-                  
-                   if (valisint(i)) ii = valtoint(i);
-                   else if (i == valnil) ii = -1;
-                   else return valerror;
-                    
-                   if (ii < 0) ii = vv->count;
-                   // dbgtrc("valset [%d]",ii);
-                   if (val_makeroom(vv,ii,sizeof(val_t))) {
-                     ((val_t *)(vv->arr))[ii] = x;
-                     if (ii >= vv->count) vv->count=ii+1;
-                     return val(vv->count-vv->first);
-                   }
-                 }
-                 break;
+    case VALBUF: break;
+
+    default    : return valnil;
   }
+                  
+  if (!val_makeroom(vv,ii,size)) return valnil;
 
-  return valerror;
+  if (size == 1) // -> i.e. is buffer
+    ((char *)(vv->arr))[ii] = valtoint(x);
+  else 
+    ((val_t *)(vv->arr))[ii] = x;
+
+  if (ii >= vv->count) vv->count=ii+1;
+  return val(vv->count - first);
 }
 
-val_t valget(val_t v, int32_t i)
+val_t valget(val_t v, val_t i)
 { 
   val_info_t vv;
+  int32_t ii;
+  
+  if (!valisint(i)) return valnil;
+
+  ii = valtoint(i);
   if (!valisvec(v) || (vv = valtoptr(v)) == NULL) return valnil;
   if (vv->count <= vv->first) { vv->count = vv->first = 0; return valnil; }
-  if (i < 0) i = vv->count+i;
-  if (i < vv->first || vv->count <= i) return valnil;
-  return ((val_t*)(vv->arr))[i];
+  if (ii < 0) ii = vv->count+ii;
+ _dbgtrc("GET: i: %d ii: %d count: %d",valtoint(i),ii,vv->count);
+  if (ii < vv->first || vv->count <= ii) return valnil;
+  return ((val_t*)(vv->arr))[ii];
 }
 
 void valclear(val_t v)
@@ -520,13 +513,14 @@ val_t valpush(val_t v, val_t x)
 val_t val_top2(val_t v, int32_t n)
 {
   if (n>0) n=-n;
-  return valget(v,n);
+  dbgtrc("TOP n: %d",n);
+  return valget(v,val(n));
 }
 
 val_t val_drop2(val_t v, int32_t n)
 {
   val_info_t vv;
-  if (!valisvec(v) || (vv = valtoptr(v)) == NULL) return valerror;
+  if (!valisvec(v) || (vv = valtoptr(v)) == NULL) return valnil;
   if (n<0) n = -n;
   vv->count -= n;
   if (vv->count <= vv->first) { vv->count = vv->first = 0; }
@@ -549,7 +543,7 @@ val_t valenq(val_t q, val_t x)
 val_t val_deq2(val_t q, int32_t n) 
 {
   val_info_t vv;
-  if (!valisvec(q) || (vv = valtoptr(q)) == NULL) return valerror;
+  if (!valisvec(q) || (vv = valtoptr(q)) == NULL) return valnil;
   if (n<0) n = -n;
   vv->first += n; 
   if (vv->count <= vv->first) { vv->count = vv->first = 0; }

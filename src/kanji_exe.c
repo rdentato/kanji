@@ -96,11 +96,18 @@ int kaj_init(kaj_pgm_t pgm, int32_t start, uint8_t reg, val_t input)
   pgm->pgm[pgm->pgm_count-3] &= 0xFF;
   pgm->pgm[pgm->pgm_count-3] |= pgm->max_pgm << 8;
 
-  pgm->pgm_flg = 0;
+  pgm->pgm_cmpflg = 0;
 
   return ERR_NONE;
 }
+static val_t const2str(char *str, val_t v)
+{
+  if (valisconst(STR_OFFSET,v)) {
+    v = val((char *)(str+valtoint(v)));
+  }
 
+  return v;
+}
 int kaj_step(kaj_pgm_t pgm) 
 {
   uint32_t op;
@@ -135,22 +142,25 @@ int kaj_step(kaj_pgm_t pgm)
       break;
 
     case TOK_ST8:
-      p = &(pgm->lst.regs[(op >> 8) & 0xFF]);
-      memcpy(p, &(pgm->pgm[pgm->cur_ln]), 8);
+      memcpy(&v, &(pgm->pgm[pgm->cur_ln]), 8);
+      v = const2str(pgm->str,v);
+      pgm->lst.regs[(op >> 8) & 0xFF] = v;
       pgm->cur_ln+=2;
       break;
 
     case TOK_STI:
-      p = &(pgm->lst.regs[(op >> 8) & 0xFF]);
       n = valtoint(pgm->lst.regs[(op & 0x00FF0000) >> 16]);
-      memcpy(p, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
+      memcpy(&v, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
+      v = const2str(pgm->str,v);
+      pgm->lst.regs[(op >> 8) & 0xFF] = v;
       pgm->cur_ln++;
       break;
 
     case TOK_STN:
-      p = &(pgm->lst.regs[(op >> 8) & 0xFF]);
       n = op >> 16;
-      memcpy(p, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
+      memcpy(&v, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
+      v = const2str(pgm->str,v);
+      pgm->lst.regs[(op >> 8) & 0xFF] = v;
       pgm->cur_ln++;
       break;
 
@@ -247,41 +257,44 @@ int kaj_step(kaj_pgm_t pgm)
 
     case TOK_CMP: 
       n = valcmp(pgm->lst.regs[(op >> 8) & 0xFF], pgm->lst.regs[(op >> 16) & 0xFF]);
-      pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
+      pgm->pgm_cmpflg = (1 << (n+1));
       break;
 
     case TOK_CP2: 
       n = valcmp(pgm->lst.regs[(op >> 8) & 0xFF], val(((int32_t)op) >> 16));
-      pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
+      pgm->pgm_cmpflg = (1 << (n+1));
       break;
 
     case TOK_CP4:
       n = valcmp(pgm->lst.regs[(op >> 8) & 0xFF], val((int32_t)(pgm->pgm[pgm->cur_ln++])));
-      pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
+      pgm->pgm_cmpflg = (1 << (n+1));
       break;
 
     case TOK_CP8:
       memcpy(&v, &(pgm->pgm[pgm->cur_ln]), 8);
+      v = const2str(pgm->str,v);
       n = valcmp( pgm->lst.regs[(op >> 8) & 0xFF], v);
-      pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
+      pgm->pgm_cmpflg = (1 << (n+1));
       pgm->cur_ln+=2;
       break;
 
     case TOK_CPI:
       n = valtoint(pgm->lst.regs[(op & 0x00FF0000) >> 16]);
       memcpy(&v, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
+      v = const2str(pgm->str,v);
      _dbgtrc("R: %lX, V: %lX",pgm->lst.regs[(op >> 8) & 0xFF],*(uint64_t *)(pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2)));
       n = valcmp( pgm->lst.regs[(op >> 8) & 0xFF], v);
-      pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
+      pgm->pgm_cmpflg = (1 << (n+1));
       pgm->cur_ln++;
       break;
 
     case TOK_CPN:
       n = op >> 16;
       memcpy(&v, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
+      v = const2str(pgm->str,v);
      _dbgtrc("R: %lX, V: %lX",pgm->lst.regs[(op >> 8) & 0xFF],*(uint64_t *)(pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2)));
       n = valcmp( pgm->lst.regs[(op >> 8) & 0xFF], v);
-      pgm->pgm_flg = (pgm->pgm_flg & 0xF8) | (1 << (n+1));
+      pgm->pgm_cmpflg = (1 << (n+1));
       pgm->cur_ln++;
       break;
 
@@ -291,31 +304,31 @@ int kaj_step(kaj_pgm_t pgm)
       break;
  
     case TOK_JEQ: 
-      if (pgm->pgm_flg & FLG_EQUAL) pgm->cur_ln = op >> 8;
+      if (pgm->pgm_cmpflg & FLG_EQUAL) pgm->cur_ln = op >> 8;
       break;
  
     case TOK_JNE: 
-      if (!(pgm->pgm_flg & FLG_EQUAL)) pgm->cur_ln = op >> 8;
+      if (!(pgm->pgm_cmpflg & FLG_EQUAL)) pgm->cur_ln = op >> 8;
       break;
  
     case TOK_JGT: 
-      if (pgm->pgm_flg & FLG_GREATER) pgm->cur_ln = op >> 8;
+      if (pgm->pgm_cmpflg & FLG_GREATER) pgm->cur_ln = op >> 8;
       break;
 
     case TOK_JGE: 
-      if (pgm->pgm_flg & (FLG_EQUAL | FLG_GREATER)) pgm->cur_ln = op >> 8;
+      if (pgm->pgm_cmpflg & (FLG_EQUAL | FLG_GREATER)) pgm->cur_ln = op >> 8;
       break;
 
     case TOK_JLT: 
-      if (pgm->pgm_flg & FLG_LESSER) pgm->cur_ln = op >> 8;
+      if (pgm->pgm_cmpflg & FLG_LESSER) pgm->cur_ln = op >> 8;
       break;
 
     case TOK_JLE: 
-      if (pgm->pgm_flg & (FLG_EQUAL | FLG_LESSER)) pgm->cur_ln = op >> 8;
+      if (pgm->pgm_cmpflg & (FLG_EQUAL | FLG_LESSER)) pgm->cur_ln = op >> 8;
       break;
 
     case TOK_BLE:
-      if (pgm->pgm_flg & (FLG_EQUAL | FLG_LESSER)) pgm->cur_ln = pgm->lst.regs[(op >> 8) & 0xFF];
+      if (pgm->pgm_cmpflg & (FLG_EQUAL | FLG_LESSER)) pgm->cur_ln = pgm->lst.regs[(op >> 8) & 0xFF];
       break;
 
     case TOK_BMP: 
@@ -323,23 +336,23 @@ int kaj_step(kaj_pgm_t pgm)
       break;
  
     case TOK_BEQ: 
-      if (pgm->pgm_flg & FLG_EQUAL) pgm->cur_ln = pgm->lst.regs[(op >> 8) & 0xFF];;
+      if (pgm->pgm_cmpflg & FLG_EQUAL) pgm->cur_ln = pgm->lst.regs[(op >> 8) & 0xFF];;
       break;
  
     case TOK_BNE: 
-      if (!(pgm->pgm_flg & FLG_EQUAL)) pgm->cur_ln = pgm->lst.regs[(op >> 8) & 0xFF];
+      if (!(pgm->pgm_cmpflg & FLG_EQUAL)) pgm->cur_ln = pgm->lst.regs[(op >> 8) & 0xFF];
       break;
  
     case TOK_BGT: 
-      if (pgm->pgm_flg & FLG_GREATER) pgm->cur_ln = pgm->lst.regs[(op >> 8) & 0xFF];
+      if (pgm->pgm_cmpflg & FLG_GREATER) pgm->cur_ln = pgm->lst.regs[(op >> 8) & 0xFF];
       break;
 
     case TOK_BGE: 
-      if (pgm->pgm_flg & (FLG_EQUAL | FLG_GREATER)) pgm->cur_ln = pgm->lst.regs[(op >> 8) & 0xFF];
+      if (pgm->pgm_cmpflg & (FLG_EQUAL | FLG_GREATER)) pgm->cur_ln = pgm->lst.regs[(op >> 8) & 0xFF];
       break;
 
     case TOK_BLT: 
-      if (pgm->pgm_flg & FLG_LESSER) pgm->cur_ln = pgm->lst.regs[(op >> 8) & 0xFF];
+      if (pgm->pgm_cmpflg & FLG_LESSER) pgm->cur_ln = pgm->lst.regs[(op >> 8) & 0xFF];
       break;
 
     case TOK_ARG:
@@ -406,19 +419,25 @@ int kaj_step(kaj_pgm_t pgm)
       break;
 
     case TOK_RT8:
-      memcpy( &(pgm->pgm[pgm->pgm_count-2]), &(pgm->pgm[pgm->cur_ln]), 8);
+      memcpy( &v, &(pgm->pgm[pgm->cur_ln]), 8);
+      v = const2str(pgm->str,v);
+      memcpy( &(pgm->pgm[pgm->pgm_count-2]), &v, 8);
       pgm->cur_ln+=2;
       break;
 
     case TOK_RTI:
       n = valtoint(pgm->lst.regs[(op & 0x00FF0000) >> 16]);
-      memcpy( &(pgm->pgm[pgm->pgm_count-2]), pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
+      memcpy( &v, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
+      v = const2str(pgm->str,v);
+      memcpy( &(pgm->pgm[pgm->pgm_count-2]), &v, 8);
       pgm->cur_ln++;
       break;
 
     case TOK_RTN:
       n = op >> 16;
-      memcpy( &(pgm->pgm[pgm->pgm_count-2]), pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
+      memcpy( &v, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
+      v = const2str(pgm->str,v);
+      memcpy( &(pgm->pgm[pgm->pgm_count-2]), &v, 8);
       pgm->cur_ln++;
       break;
 
@@ -446,10 +465,9 @@ int kaj_step(kaj_pgm_t pgm)
  
      case 0x80 | TOK_SYS:
         p = &(pgm->pgm[pgm->cur_ln]);
-
         memcpy(&fname,p,8);
         fptr = kaj_checkfname(fname);
-        dbgtrc("SYS: f: %lX (%s) -> %p",fname, kaj_sys_decode(fname), (void *)fptr);
+       _dbgtrc("SYS: f: %lX (%s) -> %p",fname, kaj_sys_decode(fname), (void *)fptr);
         if (fptr == NULL) { fprintf(stderr, "Unknown function: %s\n",kaj_sys_decode(fname)); abort();}
         pgm->pgm[pgm->cur_ln-1] &= 0xFFFFFF7F;
         memcpy(p,&fptr,8);
@@ -457,15 +475,15 @@ int kaj_step(kaj_pgm_t pgm)
     case TOK_SYS:
         p = &(pgm->pgm[pgm->cur_ln]);
         memcpy(&fptr,p,8);
-        r = valnil;
+
         v = valnil;
-        if ((pgm->pgm[pgm->cur_ln-1] & 0xFF0000) != 0xFF0000) {
+        if ((pgm->pgm[pgm->cur_ln-1] & 0xFF0000) != 0xFF0000) 
           v = pgm->lst.regs[(pgm->pgm[pgm->cur_ln-1] & 0xFF0000) >> 16];
-        }
+        
         r = fptr(v);
-        if ((pgm->pgm[pgm->cur_ln-1] & 0xFF00) != 0xFF00) {
+        if ((pgm->pgm[pgm->cur_ln-1] & 0xFF00) != 0xFF00) 
           pgm->lst.regs[(pgm->pgm[pgm->cur_ln-1] & 0xFF00) >> 8] = r;
-        }
+        
         pgm->cur_ln += 2;
         break;
 

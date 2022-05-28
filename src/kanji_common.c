@@ -61,7 +61,12 @@ kaj_pgm_t kaj_new(int32_t pgm_init_size, int32_t lbl_init_size, uint16_t stk_siz
   pgm->stk_size  = 256;
   pgm->max_regs  = 0;
   pgm->pgm_flg   = 0;
-  pgm->cur_ln = 0;
+  pgm->pgm_cmpflg= 0;
+  pgm->cur_ln    = 0;
+
+  pgm->str       = NULL;
+  pgm->str_size  = 0;
+  pgm->str_count = 0;
 
   return pgm;
 }
@@ -69,12 +74,15 @@ kaj_pgm_t kaj_new(int32_t pgm_init_size, int32_t lbl_init_size, uint16_t stk_siz
 void *kaj_free(kaj_pgm_t pgm)
 {
   if (pgm) {
+    pgm->str_size  = 0;
+    pgm->str_count = 0;
     pgm->lst_size  = 0;
     pgm->lst_count = 0;
     pgm->pgm_size  = 0;
     pgm->pgm_count = 0; 
     if (pgm->lst.lbl) free (pgm->lst.lbl);
     if (pgm->pgm) free (pgm->pgm);
+    if (pgm->str) free (pgm->str);
     free(pgm);
   }
   return NULL;

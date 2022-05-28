@@ -55,10 +55,25 @@ static void pgm_makeroom(kaj_pgm_t pgm, int32_t n)
   while (sz <= pgm->pgm_count+n)
     sz += sz/2;
   
-  if ( sz != pgm->pgm_size) {
+  if ( sz > pgm->pgm_size) {
     pgm->pgm_size = sz;
     pgm->pgm = realloc(pgm->pgm,sizeof(uint32_t) * pgm->pgm_size);
     throwif(pgm->pgm == NULL, ERR_NO_MEMORY);
+  }
+}
+
+static void str_makeroom(kaj_pgm_t pgm, int32_t n)
+{
+  int32_t sz = pgm->str_size;
+  if (sz == 0) sz = 8;
+
+  while (sz <= pgm->str_count+n)
+    sz += sz/2;
+  
+  if ( sz > pgm->str_size) {
+    pgm->str_size = sz;
+    pgm->str = realloc(pgm->str, pgm->str_size);
+    throwif(pgm->str == NULL, ERR_NO_MEMORY);
   }
 }
 
@@ -174,13 +189,13 @@ static char *arg_S_C_R(kaj_pgm_t pgm, uint32_t op, char *s, char *start, uint8_t
       else if (skp(s,"D W ']' W",&t)) {
         k = strtol(s,NULL,10);
       }
-
+      dbgtrc("IND: k=%d s= %s",k,s);
       if (k >= 0) {
         op |= ((k & 0xFFFF) << 16) | opN;
       }
       else if (skp(s,"'%'x?x W ']' W",&t)) {
         reg = add_reg(pgm,s);
-        op = reg << 16 | opI;
+        op = reg << sh | (op & 0xFF00) | opI;
       }
       else throw(ERR_INVALID_ARG,(int16_t)(t-start));
     }
@@ -515,6 +530,7 @@ static char *arg_VAL(kaj_pgm_t pgm, uint32_t op, char *start)
 {
   char *s = start;
   char *t = s;
+  int32_t n = 0;
   val_t v;
 
   if (!(pgm->pgm_flg & FLG_DATA)) {
@@ -528,20 +544,9 @@ static char *arg_VAL(kaj_pgm_t pgm, uint32_t op, char *start)
     pgm->pgm_flg |= FLG_DATA;
   }
 
-  if (skp(s,"!C 'NIL' W",&t)) {
-    add_val(pgm,valnil);
-    return t;
-  }
-
-  if (skp(s,"!C 'TRUE' W",&t)) {
-    add_val(pgm,valtrue);
-    return t;
-  }
-
-  if (skp(s,"!C 'FALSE' W",&t)) {
-    add_val(pgm,valfalse);
-    return t;
-  }
+  if (skp(s,"!C 'NIL' W",&t)) { add_val(pgm,valnil); return t; }
+  if (skp(s,"!C 'TRUE' W",&t)) { add_val(pgm,valtrue); return t; }
+  if (skp(s,"!C 'FALSE' W",&t)) { add_val(pgm,valfalse); return t; }
 
   if (skp(s,"D '.' *d W",&t)) {
     v = val(strtod(s,NULL));
@@ -549,7 +554,30 @@ static char *arg_VAL(kaj_pgm_t pgm, uint32_t op, char *start)
     return t;
   }
 
-  int32_t n=0;
+  if (*s == '"' && skp(s,"Q",&t)) {
+    v = valconst(STR_OFFSET,pgm->str_count);
+    add_val(pgm,v);
+    n = (int)(t-s)-2;
+    str_makeroom(pgm,n+1);
+
+    s++;
+    char c;
+    while (*s != '"') {
+      c = *s++;
+      if (c == '\\') {
+        c = *s++;
+        switch (c) {
+          case 'n' : c = '\n'; break;
+          case 'r' : c = '\r'; break;
+          case '0' : c = '\0'; break;
+        }
+      }
+      pgm->str[pgm->str_count++] = c;
+    }
+    pgm->str[pgm->str_count++] = '\0';
+    skp(t,"W",&t);
+    return t; 
+  }
 
   if (skp(s,"'$' X W",&t)) {
     n = strtol(s+1,NULL,16);

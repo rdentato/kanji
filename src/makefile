@@ -4,16 +4,16 @@ TOP=..
 SKPGEN=../dist/bin/skp
 
 CC=gcc
-##CC=clang
+#CC=clang
 
 OPT=-O2 -DDEBUG=DEBUG_TEST
-#OPT=-O2 -Os -fdata-sections -ffunction-sections
+OPT+=-fdata-sections -ffunction-sections
 #OPT+=-ggdb3 -O0
 
 #PROFFLAGS=-pg
 
 LNFLAGS= $(PROFFLAGS) -lm
-#LNFLAGS+=  -Wl,-fPIC,-shared,-ffunction-sections,-fdata-sections,--gc-sections
+LNFLAGS+=-s -Wl,--gc-sections
 
 CFLAGS = $(PROFFLAGS) $(OPT) -Wall -I$(TOP)/src -I$(TOP)/dist/src
 
@@ -54,4 +54,4 @@ syslib.c: kanji_sys syslib/*.c
 	rm -f syslib.tmp syslib.fnc
 
 clean:
-	$(RM) *.o kanji_sys kanji kanji_parse.c kanji_parse.h kanji_parse.t $(OP_HDRS) syslib*.*
+	$(RM) *.o kanji_sys kanji $(OP_HDRS) syslib*.???

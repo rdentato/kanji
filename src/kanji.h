@@ -20,10 +20,13 @@ extern char *opcodes;
 #define LST_SORTED_LBL   1
 #define LST_REGISTERS    2
 
-#define FLG_LESSER   0x01
-#define FLG_EQUAL    0x02
-#define FLG_GREATER  0x04
-#define FLG_DATA     0x10
+#define FLG_LESSER      0x01
+#define FLG_EQUAL       0x02
+#define FLG_GREATER     0x04
+#define FLG_DATA        0x10
+#define FLG_STATICSTR   0x20
+
+#define STR_OFFSET       1
 
 typedef struct kaj_pgm_s {
   uint32_t *pgm;
@@ -31,6 +34,9 @@ typedef struct kaj_pgm_s {
     uint64_t *lbl;
     val_t    *regs;
   } lst;
+  char     *str;
+  int32_t   str_size;
+  int32_t   str_count;
   int32_t   lst_size;
   int32_t   lst_count;
   int32_t   pgm_size;
@@ -42,7 +48,7 @@ typedef struct kaj_pgm_s {
   uint32_t  dta_start;
   uint16_t  stk_size;
   uint8_t   pgm_flg;
-  uint8_t   pgm_aux;
+  uint8_t   pgm_cmpflg;
   uint8_t   lst_type;
   uint8_t   max_regs;
 } *kaj_pgm_t;
