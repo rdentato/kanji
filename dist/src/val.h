@@ -90,11 +90,19 @@ static inline int VALTYPE(val_t v)
   return (int)((v)>>48); 
 }
 
+static inline int32_t valtoint(val_t v);
+
 static inline double valtodbl(val_t v) 
-{ double d; memcpy(&d,&v,8); return d; }
+{ double d = 0.0; 
+  if (valisdbl(v)) memcpy(&d,&v,8);
+  else d = (double)(v & VAL_INTMASK);
+  return d;
+}
 
 static inline int32_t valtoint(val_t v)
-{ return (int32_t)(v & VAL_INTMASK); }
+{ if (valisdbl(v)) return (int32_t)valtodbl(v);
+  return (int32_t)(v & VAL_INTMASK); 
+}
 
 static inline void *valtoptr(val_t v)
 { return (void *)((uintptr_t)(v & VAL_PTRMASK)); }

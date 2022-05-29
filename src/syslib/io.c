@@ -8,7 +8,7 @@ val_t io.print(val_t arg)
   switch(VALTYPE(arg)) {
     case VALINT: printf("%d ",valtoint(arg)); break;
     case VALDBL: printf("%f ",valtodbl(arg)); break;
-    case VALNIL: printf("\n"); break;
+    case VALNIL: printf("(nil)"); break;
     case VALSTR: printf("%s",(char*)valtoptr(arg)); break;
     case VALBUF: printf("%s",(char*)valtostr(arg)); break;
   }

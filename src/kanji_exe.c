@@ -548,6 +548,26 @@ int kaj_step(kaj_pgm_t pgm)
       pgm->lst.regs[reg] = val(valsize(pgm->lst.regs[(op >> 16) & 0xFF]));
       break;
 
+    case TOK_PSH:
+      valpush(pgm->lst.regs[(op >> 8) & 0xFF], pgm->lst.regs[(op >> 16) & 0xFF]);
+      break;
+
+    case TOK_T0P:
+      reg = (op >> 8) & 0xFF; 
+      pgm->lst.regs[reg] = valtop(pgm->lst.regs[(op >> 16) & 0xFF], op>>24);
+      break;
+
+    case TOK_TOP:
+      reg = (op >> 8) & 0xFF; 
+     _dbgtrc("TOPXX: %d %lX", valtoint(pgm->lst.regs[(op >> 24) & 0xFF]),pgm->lst.regs[(op >> 24) & 0xFF]);
+      pgm->lst.regs[reg] = valtop(pgm->lst.regs[(op >> 16) & 0xFF], valtoint(pgm->lst.regs[(op >> 24) & 0xFF]));
+      break;
+
+    case TOK_DRP:
+      valdrop(pgm->lst.regs[(op >> 8) & 0xFF], (op >> 16) & 0xFF);
+      break;
+
+
     default: pgm->cur_ln += (kaj_opcode_len(op)-1);
 
   }
