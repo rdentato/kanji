@@ -5,22 +5,29 @@
      JSR @99 %0 %0
 
      STO %1 0        ; Index
-     STO %0 'A'      ;
+     STO %0 'H'      ;
      SET %2 %1 %0
      INC %1 
-     STO %0 'B'      ;
+     STO %0 'i'      ;
      SET %2 %1 %0
      INC %1 
-     STO %0 10       ;
+     STO %0 '!'       ;
      SET %2 %1 %0
      INC %1 
      STO %0 0        ;
      SET %2 %1 %0
 
-     LEN %0 %2       ; Now (since the 4th element has been se)
-     JSR @99 %0 %0   ; there should be four elements in the buffer
+     LEN %0 %2       ; It will also include the ending '\0' (should be 4)
+     JSR @99 %0 %0   ; 
 
      JSR @99 %0 %2   ; print the buffer content.
+
+     STO %3 "EQUAL"  
+     CMP %2 "Hi!"    ; Compare the buffer with a static string;
+     JEQ @1   
+     STO %3 "DIFFERENT" 
+     
+@1:  JSR @99 %0 %3   ; print the buffer content.
 
      KLL %2          ; free the buffer
 

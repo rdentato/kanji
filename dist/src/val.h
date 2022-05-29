@@ -204,8 +204,12 @@ int valcmp(val_t a, val_t b)
                  if (valisdbl(b)) return val_cmp_(valtodbl(a), valtodbl(b));
                  break;
 
+    case VALBUF:
     case VALSTR: { char *pa, *pb;
-                   if ((pa = valtostr(a)) && (pb = valtostr(b))) return strcmp(pa,pb);
+                   if ((pa = valtostr(a)) && (pb = valtostr(b))) {
+                    _dbgtrc("STRCMP: [%s] [%s]",pa,pb);
+                     return strcmp(pa,pb);
+                   }
                  } 
                  break;
   }
@@ -416,7 +420,7 @@ int32_t valcount(val_t v)
   dbgtrc("CNT: %X", VALTYPE(v));
   switch (VALTYPE(v)) {
     case VALSTR: return vv ? strlen((char *)vv)+1:0;
-    
+
     case VALBUF:
     case VALVEC: return vv ? vv->count - vv->first : 0;
 
