@@ -97,6 +97,46 @@ static void add_val(kaj_pgm_t pgm,val_t v)
   pgm->pgm_count += 2;
 }
 
+static char escaped_char(char **start)
+{
+  char *s = *start;
+  int c = 0;
+  c = *s++;
+  if ( c == '\\') {
+    c = 0;
+    if ('0' <= *s && *s <= '7') {
+      for (int k = 0; k<3 ; k++) {
+        c = (c<<3) | (*s - '0');
+        s++;
+        if ( *s < '0' || '7' < *s) break;
+      }
+    }
+    else if (*s == 'x') {
+      s++;
+      for (int k = 0; k<2 ; k++) {
+        if ('0' <= *s && *s <= '9') 
+          c = (c << 4) | (*s - '0');
+        else if (('A' <= *s && *s <= 'F') || ('a' <= *s && *s <= 'f'))
+          c = (c << 4) | ((*s - 1) & 0x0F);
+        else break;
+        s++;
+      }
+    }
+    else {
+      switch (*s) {
+        case 'n' : c = '\n'; break;
+        case 'r' : c = '\r'; break;
+        case 'f' : c = '\f'; break;
+        case 'b' : c = '\b'; break;
+        default  : c = *s ; break;
+      }
+      s++;
+    }
+  }
+  *start = s;
+  return c;
+}
+
 static void add_str(kaj_pgm_t pgm, char *s, int32_t n)
 {
   val_t v;
@@ -107,19 +147,7 @@ static void add_str(kaj_pgm_t pgm, char *s, int32_t n)
   s++;
   char c;
   while (*s != '"') {
-    c = *s++;
-    if (c == '\\') {
-      c = *s++;
-      // TODO: Handle \x and \12
-      switch (c) {
-        case 'n' : c = '\n'; break;
-        case 'r' : c = '\r'; break;
-        case 'f' : c = '\f'; break;
-        case 'b' : c = '\b'; break;
-        case '0' : c = '\0'; break;
-        default  : break;
-      }
-    }
+    c = escaped_char(&s);
     pgm->str[pgm->str_count++] = c;
   }
   pgm->str[pgm->str_count++] = '\0';
@@ -244,16 +272,14 @@ static char *arg_S_C_R(kaj_pgm_t pgm, uint32_t op, char *s, char *start, uint8_t
   }
 
   if (skp(s,"'$' X W",&t)) {
-    // STO R[X] $FF3
     n = strtol(s+1,NULL,16);
   }
   else if (skp(s,"D W",&t)) {
-    // STO R[X] -4
     n = strtol(s,NULL,10);
   }
   else if ((*s == '\'') && skp(s,"Q W",&t)) {
-    n = s[1]; 
-    // TODO: Handle escaped sequences \n, etc
+    s++;
+    n = escaped_char(&s); 
   }
   else throw(ERR_INVALID_ARG,(int16_t)(t-start));
 
