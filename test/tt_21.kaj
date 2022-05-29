@@ -22,6 +22,10 @@
 
      JSR @99 %0 %2   ; print the buffer content.
 
+     STO %1 0
+     GET %3 %2 %1
+     JSR @99 %0 %3   ; print the (ASCII code of the) first letter 
+
      STO %3 "EQUAL"  
      CMP %2 "Hi!"    ; Compare the buffer with a static string;
      JEQ @1   
@@ -40,4 +44,4 @@
      SYS io.print %0 %0
      RET
      
-@D0: VAL '\x41'     
+@D0: VAL 'H'     

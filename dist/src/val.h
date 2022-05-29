@@ -517,10 +517,20 @@ val_t valget(val_t v, val_t i)
 { 
   val_info_t vv;
   int32_t ii;
+  char *s = NULL;
   
   if (!valisint(i)) return valnil;
 
   ii = valtoint(i);
+
+  if (valisstr(v)) s = valtoptr(v);
+  else if (valisbuf(v)) s = valtostr(v);
+
+  if (s != NULL) {
+    if (ii <0 || ii >= strlen(s)) return (val(0));
+    return val((int)(s[ii]));
+  }
+
   if (!valisvec(v) || (vv = valtoptr(v)) == NULL) return valnil;
   if (vv->count <= vv->first) { vv->count = vv->first = 0; return valnil; }
   if (ii < 0) ii = vv->count+ii;
