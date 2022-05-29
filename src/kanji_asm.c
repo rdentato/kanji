@@ -633,6 +633,10 @@ static char *arg_VAL(kaj_pgm_t pgm, uint32_t op, char *start)
   else if (skp(s,"D W",&t)) {
     n = strtol(s,NULL,10);
   }
+  else if ((*s == '\'') && skp(s,"Q W",&t)) {
+    s++;
+    n = escaped_char(&s); 
+  }
   else throw(ERR_INVALID_ARG,(int16_t)(t-start));
 
   v = val(n);

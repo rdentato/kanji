@@ -5,7 +5,7 @@
      JSR @99 %0 %0
 
      STO %1 0        ; Index
-     STO %0 'H'      ;
+     STO %0 @D0[0]      ;
      SET %2 %1 %0
      INC %1 
      STO %0 'i'      ;
@@ -40,3 +40,4 @@
      SYS io.print %0 %0
      RET
      
+@D0: VAL '\x41'     
