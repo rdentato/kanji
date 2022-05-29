@@ -110,9 +110,12 @@ static void add_str(kaj_pgm_t pgm, char *s, int32_t n)
     c = *s++;
     if (c == '\\') {
       c = *s++;
+      // TODO: Handle \x and \12
       switch (c) {
         case 'n' : c = '\n'; break;
         case 'r' : c = '\r'; break;
+        case 'f' : c = '\f'; break;
+        case 'b' : c = '\b'; break;
         case '0' : c = '\0'; break;
         default  : break;
       }
@@ -248,6 +251,10 @@ static char *arg_S_C_R(kaj_pgm_t pgm, uint32_t op, char *s, char *start, uint8_t
     // STO R[X] -4
     n = strtol(s,NULL,10);
   }
+  else if ((*s == '\'') && skp(s,"Q W",&t)) {
+    n = s[1]; 
+    // TODO: Handle escaped sequences \n, etc
+  }
   else throw(ERR_INVALID_ARG,(int16_t)(t-start));
 
   if (n <= -32768 || 32767 < n) {
@@ -300,7 +307,7 @@ static char *arg_JMP(kaj_pgm_t pgm, uint32_t op, char *start)
   uint32_t reg;
   if (skp(s, "'%'x?x W", &t)) {
     reg = add_reg(pgm,s);
-    op = op - (TOK_JEQ - TOK_BEQ);
+    op = op + (TOK_ZEQ - TOK_JEQ);
     op |= reg << 8;
     add_long(pgm,op);
     return t;
@@ -337,7 +344,7 @@ static char *arg_JSR(kaj_pgm_t pgm, uint32_t op, char *start)
 
   if (skp(s, "'%'x?x W", &t)) {
     reg = add_reg(pgm,s);
-    op = TOK_BSR;
+    op = TOK_ZSR;
     op |= reg << 8;
   }
   else if (skp(s, "D W", &t)) {
@@ -755,6 +762,7 @@ int32_t kaj_addline(kaj_pgm_t pgm, char *line)
           t = arg_VAL(pgm,op,t);
           break;
 
+        case TOK_BUF:
         case TOK_VEC:
           t = arg_VEC(pgm,op,t);
           break;

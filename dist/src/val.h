@@ -415,10 +415,11 @@ int32_t valcount(val_t v)
   val_info_t vv = valtoptr(v);
   dbgtrc("CNT: %X", VALTYPE(v));
   switch (VALTYPE(v)) {
-    case VALSTR: return vv ? strlen((char *)vv):0;
-
+    case VALSTR: return vv ? strlen((char *)vv)+1:0;
+    
     case VALBUF:
     case VALVEC: return vv ? vv->count - vv->first : 0;
+
     default: dbgtrc("CNT OF: %lX",v);
   }
   return 0;
@@ -500,7 +501,7 @@ val_t valset(val_t v, val_t i, val_t x)
   if (!val_makeroom(vv,ii,size)) return valnil;
 
   if (size == 1) // -> i.e. is buffer
-    ((char *)(vv->arr))[ii] = valtoint(x);
+    ((char *)(vv->arr))[ii] = (valtoint(x) & 0xFF);
   else 
     ((val_t *)(vv->arr))[ii] = x;
 

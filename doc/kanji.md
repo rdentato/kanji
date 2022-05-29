@@ -1,5 +1,10 @@
 # kanji a bytecode VM that computes
 
+WARNING: This doc is work in progress! It may or may not be 100%. Please aks if doubt!
+
+DISCORD group: https://discord.gg/vPgsxHcgXX
+MAIL: rdentato@gmail.com
+
 ## General architecture
 
 kanji is *register based* virtual machine
@@ -56,7 +61,7 @@ The *destination* is always a register
    - Register to register:  `STO %00 %01`
    - Constant to register: `STO %00 23` or `STO %01 NIL`
    - Label offset to register:  `STO %00 @43`
-   - Stored value: `STO %00 @43[0]`, `STO %00 @43[0]`
+   - Stored value: `STO %00 @43[0]`, `STO %00 @43[1]`
    
 ## Comparison
 Comparison have the same syntax as the `STO` instruction:

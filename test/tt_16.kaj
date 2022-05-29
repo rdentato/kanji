@@ -1,0 +1,7 @@
+  
+    RTV "pio pio\n"
+    RET
+
+@1: VAL "RIGHT\n"
+    VAL "LEFT\n"
+@3: VAL "STOP\n"

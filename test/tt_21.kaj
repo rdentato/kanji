@@ -1,0 +1,35 @@
+
+     BUF %2          ; create a new buffer
+
+     LEN %0 %2       ; Get current lenght (should be 0)
+     JSR @99 %0 %0
+
+     STO %1 0        ; Index
+     STO %0 'A'      ;
+     SET %2 %1 %0
+     INC %1 
+     STO %0 'B'      ;
+     SET %2 %1 %0
+     INC %1 
+     STO %0 10       ;
+     SET %2 %1 %0
+     INC %1 
+     STO %0 0        ;
+     SET %2 %1 %0
+
+     LEN %0 %2       ; Now (since the 4th element has been se)
+     JSR @99 %0 %0   ; there should be four elements in the buffer
+
+     JSR @99 %0 %2   ; print the buffer content.
+
+     KLL %2          ; free the buffer
+
+     RET
+
+; Print the argument and then a newline
+@99: ARG %0
+     SYS io.print %0 %0
+     STO %0 "\n"
+     SYS io.print %0 %0
+     RET
+     

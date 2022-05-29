@@ -1,0 +1,12 @@
+     STO %1 "pippo"
+     LEN %0 %1       ; Also counts the '\0' at the end!
+     JSR @99 %0 %0
+     RET
+
+; Print the argument and then a newline
+@99: ARG %0
+     SYS io.print %0 %0
+     STO %0 "\n"
+     SYS io.print %0 %0
+     RET
+     

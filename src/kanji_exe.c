@@ -351,31 +351,31 @@ int kaj_step(kaj_pgm_t pgm)
       if (pgm->pgm_cmpflg & (FLG_EQUAL | FLG_LESSER)) pgm->cur_ln = op >> 8;
       break;
 
-    case TOK_BLE:
+    case TOK_ZLE:
       if (pgm->pgm_cmpflg & (FLG_EQUAL | FLG_LESSER)) pgm->cur_ln = pgm->lst.regs[(op >> 8) & 0xFF];
       break;
 
-    case TOK_BMP: 
+    case TOK_ZMP: 
       pgm->cur_ln = pgm->lst.regs[(op >> 8) & 0xFF];
       break;
  
-    case TOK_BEQ: 
+    case TOK_ZEQ: 
       if (pgm->pgm_cmpflg & FLG_EQUAL) pgm->cur_ln = pgm->lst.regs[(op >> 8) & 0xFF];;
       break;
  
-    case TOK_BNE: 
+    case TOK_ZNE: 
       if (!(pgm->pgm_cmpflg & FLG_EQUAL)) pgm->cur_ln = pgm->lst.regs[(op >> 8) & 0xFF];
       break;
  
-    case TOK_BGT: 
+    case TOK_ZGT: 
       if (pgm->pgm_cmpflg & FLG_GREATER) pgm->cur_ln = pgm->lst.regs[(op >> 8) & 0xFF];
       break;
 
-    case TOK_BGE: 
+    case TOK_ZGE: 
       if (pgm->pgm_cmpflg & (FLG_EQUAL | FLG_GREATER)) pgm->cur_ln = pgm->lst.regs[(op >> 8) & 0xFF];
       break;
 
-    case TOK_BLT: 
+    case TOK_ZLT: 
       if (pgm->pgm_cmpflg & FLG_LESSER) pgm->cur_ln = pgm->lst.regs[(op >> 8) & 0xFF];
       break;
 
@@ -402,7 +402,7 @@ int kaj_step(kaj_pgm_t pgm)
       
       break;
 
-    case TOK_BSR: {
+    case TOK_ZSR: {
 //        int32_t dest;
 //       _dbgtrc("BSR: op: %08X arg: %d %lX", op, pgm->arg_reg, pgm->lst.regs[pgm->arg_reg]);
 //        start_JSR(pgm, pgm->arg_reg, pgm->lst.regs[pgm->arg_reg]);
@@ -514,6 +514,11 @@ int kaj_step(kaj_pgm_t pgm)
     case TOK_VEC:
       reg = (op >> 8) & 0xFF; 
       pgm->lst.regs[reg] = valvec(((uint32_t)op) >> 16);
+      break;
+
+    case TOK_BUF:
+      reg = (op >> 8) & 0xFF; 
+      pgm->lst.regs[reg] = valbuf(((uint32_t)op) >> 16);
       break;
 
     case TOK_KLL:

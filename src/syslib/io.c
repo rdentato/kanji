@@ -10,6 +10,7 @@ val_t io.print(val_t arg)
     case VALDBL: printf("%f ",valtodbl(arg)); break;
     case VALNIL: printf("\n"); break;
     case VALSTR: printf("%s",(char*)valtoptr(arg)); break;
+    case VALBUF: printf("%s",(char*)valtostr(arg)); break;
   }
   return valnil;
 }
