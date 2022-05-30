@@ -264,17 +264,27 @@ int kaj_step(kaj_pgm_t pgm)
         pgm->lst.regs[(op >> 8) & 0xFF] = val(valtoint(v) + n) ;
         break;
       }
+      if (valisstr(v)) {
+        char *s = valtoptr(v);
+        while ((n > 0) && *s) { n--; s++;}
+        pgm->lst.regs[(op >> 8) & 0xFF] = val(s);
+        break;
+      }
       break;
 
     case TOK_DEC: 
       v = pgm->lst.regs[(op >> 8) & 0xFF];
       n = op >> 16;
       if (valisdbl(v)) {
-        pgm->lst.regs[(op >> 8) & 0xFF] = val(valtodbl(v) - (double)n);
+        double d = valtodbl(v) - (double)n;
+        pgm->lst.regs[(op >> 8) & 0xFF] = val(d);
+        if (d == 0.0) pgm->pgm_cmpflg = FLG_EQUAL;
         break;
       }
       if (valisint(v)) {
-        pgm->lst.regs[(op >> 8) & 0xFF] = val(valtoint(v) - n) ;
+        int32_t i = valtoint(v) - n;
+        pgm->lst.regs[(op >> 8) & 0xFF] = val(i) ;
+        if (i == 0) pgm->pgm_cmpflg = FLG_EQUAL;
         break;
       }
       break;
@@ -527,6 +537,11 @@ int kaj_step(kaj_pgm_t pgm)
       pgm->lst.regs[reg] = valnil;
       break;
 
+    case TOK_CLR:
+      reg = (op >> 8) & 0xFF; 
+      valclear(pgm->lst.regs[reg]);
+      break;
+
     case TOK_SET:
       valset(pgm->lst.regs[(op >> 8) & 0xFF],pgm->lst.regs[(op >> 16) & 0xFF],pgm->lst.regs[(op >> 24) & 0xFF]);
       break;
@@ -565,6 +580,29 @@ int kaj_step(kaj_pgm_t pgm)
 
     case TOK_DRP:
       valdrop(pgm->lst.regs[(op >> 8) & 0xFF], (op >> 16) & 0xFF);
+      break;
+
+    case TOK_ENQ:
+      valenq(pgm->lst.regs[(op >> 8) & 0xFF], pgm->lst.regs[(op >> 16) & 0xFF]);
+      break;
+
+    case TOK_N0Q:
+      reg = (op >> 8) & 0xFF; 
+      n= op>>24;
+      if (n>0) n--;
+      pgm->lst.regs[reg] = valhead(pgm->lst.regs[(op >> 16) & 0xFF], n);
+      break;
+
+    case TOK_NXQ:
+      reg = (op >> 8) & 0xFF; 
+      n = valtoint(pgm->lst.regs[(op >> 24) & 0xFF]);
+      if (n>0) n--;
+     _dbgtrc("NXTXX: %d %lX", valtoint(pgm->lst.regs[(op >> 24) & 0xFF]),pgm->lst.regs[(op >> 24) & 0xFF]);
+      pgm->lst.regs[reg] = valhead(pgm->lst.regs[(op >> 16) & 0xFF], n);
+      break;
+
+    case TOK_DEQ:
+      valdeq(pgm->lst.regs[(op >> 8) & 0xFF], (op >> 16) & 0xFF);
       break;
 
 

@@ -549,12 +549,12 @@ val_t valget(val_t v, val_t i)
 
 void valclear(val_t v)
 {
+  val_info_t vv;
   switch (VALTYPE(v)) {
     case VALBUF:
-    case VALVEC: { val_info_t vv;
-                   if ((vv = valtoptr(v)) != NULL) {
+    case VALVEC: if ((vv = valtoptr(v)) != NULL) {
                      vv->count = vv->first = 0;
-                   }
+                     if (vv->arr) ((char *)(vv->arr))[0] = '\0';
                  }
                  break;
   }

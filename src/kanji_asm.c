@@ -141,7 +141,7 @@ static void add_str(kaj_pgm_t pgm, char *s, int32_t n)
 {
   val_t v;
 
-  dbgtrc("ADDSTR: [%.*s] @ %d",n,s+1,pgm->str_count);
+ _dbgtrc("ADDSTR: [%.*s] @ %d",n,s+1,pgm->str_count);
 
   v = valconst(STR_OFFSET,pgm->str_count);
   str_makeroom(pgm,n+1);
@@ -741,6 +741,7 @@ int32_t kaj_addline(kaj_pgm_t pgm, char *line)
           break;
 
         case TOK_KLL :
+        case TOK_CLR :
         case TOK_ARG :
           t = arg_1_regs(pgm,op,t);
           break;
