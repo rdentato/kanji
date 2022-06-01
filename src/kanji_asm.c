@@ -496,6 +496,39 @@ static char *arg_reg_int(kaj_pgm_t pgm, uint32_t op, char *start)
   return t;
 }
 
+static char *arg_STR(kaj_pgm_t pgm, uint32_t op, char *start)
+{
+  char *s = start;
+  char *t = s;
+  uint32_t reg;
+  int32_t n = -1;
+
+  if (skp(s, "'%'x?x W", &t)) {
+    reg = add_reg(pgm,s);
+    op |= reg << 8;
+    s = t;
+  }
+  else throw(ERR_INVALID_ARG);
+
+  if (skp(s, "'%'x?x W", &t)) {
+    reg = add_reg(pgm,s);
+    op |= reg << 16;
+    add_long(pgm,op);
+    return t;
+  }
+
+  if (skp(s, "'$'X W", &t))    n = strtol(s,NULL,16);
+  else if (skp(s, "D W", &t))  n = strtol(s,NULL,10);
+  
+  if (n < 0) throw(ERR_INVALID_ARG,(int16_t)(t-start));
+
+  op = (op & 0xFF00) | TOK_S7R; 
+  add_long(pgm,op);
+  add_long(pgm,n);
+  return t;
+}
+
+
 static char *arg_SHIFT(kaj_pgm_t pgm, uint32_t op, char *start, uint32_t op_alt)
 {
   char *s = start;
@@ -766,6 +799,10 @@ int32_t kaj_addline(kaj_pgm_t pgm, char *line)
         case TOK_INC:
         case TOK_DEC:
           t = arg_reg_int(pgm,op,t);
+          break;
+
+        case TOK_STR:
+          t = arg_STR(pgm,op,t);
           break;
 
         case TOK_NOP:

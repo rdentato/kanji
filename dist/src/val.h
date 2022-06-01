@@ -46,6 +46,9 @@ typedef uint64_t val_t;
 #define valOK            0x7FFE100000000003llu
 #define valerror         0x7FFE1000FFFFFFFFllu
 
+extern char *val_nilstr;
+#define valnilstr (val(val_nilstr))
+
 #define valconst(n,x)   (0x7FFE200000000000llu | ((uint64_t)((n) & 0xF)) << 32 | (uint32_t)(x))
 #define valisconst(n,x) (((x) & VAL_INTTYPE) == valconst(n,0))
 
@@ -198,6 +201,8 @@ int32_t valsize(val_t v);
 //   8    Y     888    .8'     `888.    888    8       `888  
 //  o8o        o888o  o88o     o8888o  o888o  o8o        `8  
 //  --------------------------------------------------------
+
+char *val_nilstr = "";
 
 #define val_cmp_(x,y) ((x)<(y)?-1:((x)==(y))?0:1)
 int valcmp(val_t a, val_t b)

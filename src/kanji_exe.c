@@ -589,14 +589,14 @@ int kaj_step(kaj_pgm_t pgm)
     case TOK_N0Q:
       reg = (op >> 8) & 0xFF; 
       n= op>>24;
-      if (n>0) n--;
+      if (n>0) n--; // because valdeq starts from 0 not 1
       pgm->lst.regs[reg] = valhead(pgm->lst.regs[(op >> 16) & 0xFF], n);
       break;
 
     case TOK_NXQ:
       reg = (op >> 8) & 0xFF; 
       n = valtoint(pgm->lst.regs[(op >> 24) & 0xFF]);
-      if (n>0) n--;
+      if (n>0) n--; // because valdeq starts from 0 not 1
      _dbgtrc("NXTXX: %d %lX", valtoint(pgm->lst.regs[(op >> 24) & 0xFF]),pgm->lst.regs[(op >> 24) & 0xFF]);
       pgm->lst.regs[reg] = valhead(pgm->lst.regs[(op >> 16) & 0xFF], n);
       break;
@@ -605,6 +605,19 @@ int kaj_step(kaj_pgm_t pgm)
       valdeq(pgm->lst.regs[(op >> 8) & 0xFF], (op >> 16) & 0xFF);
       break;
 
+    case TOK_STR:
+      reg = (op >> 8) & 0xFF; 
+      n = pgm->pgm[pgm->cur_ln++];
+      if (n < pgm->str_count) pgm->lst.regs[reg] = val(pgm->str + n);
+      else pgm->lst.regs[reg] = valnilstr;
+      break;
+
+    case TOK_S7R:
+      reg = (op >> 8) & 0xFF; 
+      n = pgm->pgm[pgm->cur_ln++];
+      if (n < pgm->str_count) pgm->lst.regs[reg] = val(pgm->str + n);
+      else pgm->lst.regs[reg] = valnilstr;
+      break;
 
     default: pgm->cur_ln += (kaj_opcode_len(op)-1);
 

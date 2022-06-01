@@ -23,6 +23,7 @@ int kaj_opcode_len(uint32_t op)
     case TOK_RT4:
     case TOK_CP4:
     case TOK_ST4: 
+    case TOK_S7R:
     case TOK_JSR: len++;
                   break;
 
