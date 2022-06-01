@@ -251,3 +251,25 @@ recognizable as a interface function (it would be an illegal name in C).
 The function name is case insentive, may contain only letters, numbers 
 and a mandatory dot (`.`). It can't be longer than 12 characters (dot included).
 
+## Using kanji from C
+
+To build a kanji program you can, of course, just write down each opcode 
+in an array. However this may be more complicated than it sounds because
+there are a lot of variation for each opcode.
+
+For example, along with the `STO` opcode there are `ST4` to store 32 bit
+integers, `ST8` to store `val_t` values, `STI` to pick a constant etc etc.
+
+Also, you'll have to layout the constant strings appropriately, the registers
+and so on. Rather cumbersome!
+
+The easiest way is to use the provided assembler:
+
+   - create a new program with `kaj_new()`
+   - add the lines (as strings) one by one with `kaj_addline()`
+   - finalize the assembly with `kaj_assemble()`
+   - run the program with `kaj_run()`
+   - destroy the program with `kaj_free()`
+
+You can see this in action in the main of `src/kanji.c` and 
+the `kaj_loadfromfile()` function in `src/kanji_asm.c`.

@@ -1015,7 +1015,7 @@ int kaj_fromfile(kaj_pgm_t pgm, FILE *f, FILE *errfile)
   while (err == 0 && fgets(line, MAX_LINE_LEN, f)) {
     err = kaj_addline(pgm,line);
   }
-  err = kaj_assemble(pgm);
+  err = kaj_assemble(pgm);  // will just return if there is an error
   kaj_perror(pgm,line,errfile);
   return err;
 }
