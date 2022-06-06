@@ -1,7 +1,15 @@
 # kanji
 
-The purpose of **kanji** (which translates in English as "*x<sub>1</sub> computes x<sub>2</sub> from data x<sub>3</sub> by process x<sub>4</sub>*")
-is to provide an easy and flexible target for programming languages.
+**kanji** (which translates in English as "*x<sub>1</sub> computes x<sub>2</sub> from data x<sub>3</sub> by process x<sub>4</sub>*")
+is an assembler-like scripting language that is intended to be 
+used as a target for transpiling higher level interpreted languages.
+
+It may be useful in the early stages of language development if you want
+to have a running (albeit not final) implementation of your language while
+still working on the syntax/semantic aspects.
+Should the perfomance prove themselves adequate to your use case, 
+nothing prevents you to use it as the final run-time.
+
   
 It's a simple CPU-like machine with up to 254 registers, each register can hold a *value* which can be:
 

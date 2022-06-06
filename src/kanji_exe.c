@@ -100,6 +100,38 @@ int kaj_init(kaj_pgm_t pgm, int32_t start, uint8_t reg, val_t input)
 
   return ERR_NONE;
 }
+
+static val_t newvec(kaj_pgm_t pgm, uint32_t sze)
+{
+  val_info_t p = pgm->vecs;
+  val_t v;
+  if (p == NULL) return valvec(sze);
+  pgm->vecs = p->nxt;
+  v = VALVEC | (((uintptr_t)p) & VAL_PTRMASK);
+  valresize(v, sze);
+  return v;
+}
+
+static val_t newbuf(kaj_pgm_t pgm, uint32_t sze)
+{
+  val_info_t p = pgm->bufs;
+  val_t v;
+  if (p == NULL) return valvec(sze);
+  pgm->bufs = p->nxt;
+  v = VALBUF | (((uintptr_t)p) & VAL_PTRMASK);
+  valresize(v, sze);
+  return v;
+}
+
+static void kll(kaj_pgm_t pgm, val_t v)
+{ 
+   val_info_t p=valtoptr(v);
+   switch(VALTYPE(v)) {
+     case VALVEC: p->nxt = pgm->vecs; pgm->vecs = p->nxt; break;
+     case VALBUF: p->nxt = pgm->bufs; pgm->bufs = p->nxt; break;
+   }
+}
+
 static val_t const2str(char *str, val_t v)
 {
   if (valisconst(STR_OFFSET,v)) {
@@ -523,17 +555,17 @@ int kaj_step(kaj_pgm_t pgm)
 
     case TOK_VEC:
       reg = (op >> 8) & 0xFF; 
-      pgm->lst.regs[reg] = valvec(((uint32_t)op) >> 16);
+      pgm->lst.regs[reg] = newvec(pgm,((uint32_t)op) >> 16);
       break;
 
     case TOK_BUF:
       reg = (op >> 8) & 0xFF; 
-      pgm->lst.regs[reg] = valbuf(((uint32_t)op) >> 16);
+      pgm->lst.regs[reg] = newbuf(pgm,((uint32_t)op) >> 16);
       break;
 
     case TOK_KLL:
       reg = (op >> 8) & 0xFF; 
-      valfree(pgm->lst.regs[reg]);
+      kll(pgm,pgm->lst.regs[reg]);
       pgm->lst.regs[reg] = valnil;
       break;
 

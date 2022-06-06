@@ -27,8 +27,8 @@ A value can be:
 > -* 00 00 XX .. ST8 R[X] V          ;*R[X] <- v in next 8 bytes (val)
 > -* 00 YY XX .. STI R[X] @ZZ[YY]    ; ZZ in next 4 bytes
 > -* NN NN XX .. STN R[X] @ZZ[NN]    ; ZZ in next 4 bytes
-> *  00 YY XX .. STR R[X] R[Y]       ; Store in R[X] the (ptr to the) string at offset R[Y
-> *  00 00 XX .. S7R R[X] n          ; Same as STR but n in next 4 bytes 
+> ** 00 YY XX .. STR R[X] R[Y]       ; Store in R[X] the (ptr to the) string at offset R[Y
+> -* 00 00 XX .. S7R R[X] n          ; Same as STR but n in next 4 bytes 
 > ** 00 YY XX .. CMP R[X] R[Y]       ; 
 > -* nn nn XX .. CP2 R[X] n          ; 
 > -* 00 00 XX .. CP4 R[X] n          ; 
@@ -98,7 +98,7 @@ A value can be:
 > -* 00 00 XX .. ZMP R[X]
 > -  00 00 XX .. ZSR R[X]
 > ** ZZ YY XX .. SAV R[X] R[Y] R[Z] ; Save R[X] R[Y] R[Z] (in that order). 
-> ** ZZ YY XX .. RCL R[X] R[Y] R[Z] ; Save R[X] R[Y] R[Z] (in that order). 
+> ** ZZ YY XX .. RCL R[X] R[Y] R[Z] ; Recall R[X] R[Y] R[Z] (in that order). 
 > ** 00 00 00 .. DTA                ; End of code section/start of data section
 > *- .. .. .. .. VAL n              ; Place a val into next slots
 
@@ -109,3 +109,9 @@ SYS encoding:
 0123456789012345678901234567890123456789
  ABCDEFGHIJKLMNOPQRSTUVWXYZ . 0123456789
 
+
+VEC %A 2 
+SET %A 0 "pippo.txt"
+SET %A 1 "w"
+SYS io.open %1 %A
+KLL %A

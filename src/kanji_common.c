@@ -65,6 +65,9 @@ kaj_pgm_t kaj_new(int32_t pgm_init_size, int32_t lbl_init_size, uint16_t stk_siz
   pgm->pgm_cmpflg= 0;
   pgm->cur_ln    = 0;
 
+  pgm->vecs = NULL;
+  pgm->bufs = NULL;
+
   pgm->str       = NULL;
   pgm->str_size  = 0;
   pgm->str_count = 0;
@@ -84,6 +87,8 @@ void *kaj_free(kaj_pgm_t pgm)
     if (pgm->lst.lbl) free (pgm->lst.lbl);
     if (pgm->pgm) free (pgm->pgm);
     if (pgm->str) free (pgm->str);
+    for (val_info_t p=pgm->vecs; p != NULL; p = p->nxt) valfree(VALVEC | ((uintptr_t)p));
+    for (val_info_t p=pgm->bufs; p != NULL; p = p->nxt) valfree(VALBUF | ((uintptr_t)p));
     free(pgm);
   }
   return NULL;

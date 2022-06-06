@@ -31,6 +31,16 @@
 
 typedef uint64_t val_t;
 
+typedef struct val_info_s {
+     void *arr;
+     void *nxt;
+  int32_t  size;
+  int32_t  count;
+  int32_t  first;
+  int32_t  prv_sz;
+  int32_t  refs;
+} *val_info_t;
+
 #define VAL_MASK      0xFFFF000000000000llu
 #define VAL_NANMASK   0x7FFC000000000000llu
 
@@ -344,23 +354,13 @@ val_t valasr(val_t a, val_t n)
   return a;
 }
 
-typedef struct val_info_s {
-    void *arr;
-  int32_t size;
-  int32_t count;
-  int32_t first;
-  int32_t prv_sz;
-  int32_t cur;
-  int32_t refcnt;
-} *val_info_t;
-
 val_t valfree(val_t v)
 {
   switch (VALTYPE(v)) {
     case VALBUF:
     case VALVEC: { val_info_t vv = valtoptr(v);
                    free(vv->arr);
-                   vv->size = vv->count = vv->cur = vv->refcnt = 0;
+                   vv->size = vv->count = 0;
                    vv->arr = NULL;
                    free(vv);
                  }
@@ -455,8 +455,7 @@ static val_t val_vec(int32_t sz, int32_t esz, val_t type)
   vv->first = 0;
   vv->prv_sz = 4; // Start of Fibonacci seq 0,4,...
   vv->count = 0;
-  vv->cur = 0;
-  vv->refcnt = 1;
+  vv->nxt = NULL;
 
   if ((sz > 0) && !val_makeroom(vv,sz,esz)) { 
     vv->size = 0;

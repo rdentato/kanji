@@ -34,7 +34,9 @@ typedef struct kaj_pgm_s {
     uint64_t *lbl;
     val_t    *regs;
   } lst;
-  char     *str;
+  val_info_t vecs;
+  val_info_t bufs;
+  char     *str; // constant strings
   int32_t   str_size;
   int32_t   str_count;
   int32_t   lst_size;
