@@ -1,4 +1,5 @@
 
+#include <stdio.h>
 #include "val.h"
 #include "dbg.h"
 
@@ -15,26 +16,38 @@
   io.write
 */
 
+static int prt(FILE *f,val_t arg)
+{
+  switch(VALTYPE(arg)) {
+    case VALINT: return fprintf(f,"%d ",valtoint(arg));
+    case VALDBL: return fprintf(f,"%f ",valtodbl(arg));
+    case VALNIL: return fprintf(f,"(nil)");
+    case VALSTR: return fprintf(f,"%s",(char*)valtoptr(arg));
+    case VALBUF: return fprintf(f,"%s",(char*)valtostr(arg));
+  }
+  return 0;
+}
+
 val_t io.print(val_t args)
 {
  _dbgtrc("IO.PRINT: %lX %04X",arg,VALTYPE(arg));
   FILE *f = stdout;
   val_t arg = args;
+  int k = 0;
   if (valisvec(args) && valcount(args)>1) {
-    arg = valget(args,val(0));
+    arg = valget(args,val(k));
     if (valisptr(arg)) {
       f = valtoptr(arg);
-      arg = valget(args,val(1));
+      k++;
+      arg = valget(args,val(k));
     }
-    else return valnil;
+    do {
+      prt(f,arg); k++;
+      arg = valget(args,val(k));
+    } while (k<valcount(args));
   }
-  switch(VALTYPE(arg)) {
-    case VALINT: fprintf(f,"%d ",valtoint(arg)); break;
-    case VALDBL: fprintf(f,"%f ",valtodbl(arg)); break;
-    case VALNIL: fprintf(f,"(nil)"); break;
-    case VALSTR: fprintf(f,"%s",(char*)valtoptr(arg)); break;
-    case VALBUF: fprintf(f,"%s",(char*)valtostr(arg)); break;
-  }
+  else prt(f,arg);
+  
   return valnil;
 }
 
@@ -66,3 +79,11 @@ val_t io.close(val_t file)
   return valnil;
 }
 
+val_t io.stderr(val_t arg)
+{  return val((void *)stderr); }
+
+val_t io.stdout(val_t arg)
+{  return val((void *)stdout); }
+
+val_t io.stdin(val_t arg)
+{  return val((void *)stdin); }

@@ -430,7 +430,7 @@ int32_t valsize(val_t v)
 int32_t valcount(val_t v)
 {
   val_info_t vv = valtoptr(v);
-  dbgtrc("CNT: %X", VALTYPE(v));
+ _dbgtrc("CNT: %X", VALTYPE(v));
   switch (VALTYPE(v)) {
     case VALSTR: return vv ? strlen((char *)vv)+1:0;
 

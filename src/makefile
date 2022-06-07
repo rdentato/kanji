@@ -54,7 +54,7 @@ syslib.c: kanji_sys syslib/*.c
 	sed    's/\([a-zA-Z0-9]*\)\.\([a-zA-Z0-9]*\)/val_t sys_\1_\2(val_t);/' syslib.fnc > syslib_fnc.h
 	./kanji_sys < syslib.fnc > syslib.tmp
 	sort syslib.tmp > syslib_lst.h
-	#rm -f syslib.tmp syslib.fnc
+	rm -f syslib.tmp syslib.fnc
 
 clean:
 	$(RM) *.o kanji_sys kanji $(OP_HDRS) syslib*.???
