@@ -1,0 +1,30 @@
+% # knight
+% https://github.com/knight-lang/knight-lang/blob/master/specs.md
+
+prog = _expr+ _EOF_;
+
+expr = __ (function / number / string / variable) ;
+
+function = _arity0 / _arity1 #?1 / _arity2 #?2 / _arity3 #?3 / _arity4 #?4;
+
+% TRUE, FALSE, NULL, PROMPT, RANDOM
+arity0 = _"[TFNPR]*[_A-Z]" ;
+
+% EVAL, BLOCK, CALL, QUIT, LENGTH, DUMP, OUTPUT, ASCII, !, :, `, ~
+arity1 = ("[EBCQLDOA]*[_A-Z]" / "[!:`~]") _expr ;
+
+% +, -, *, /, %, ^, <, >, ?, &, |, ;, =, WHILE
+arity2 = ("[-+*/%^<>?&|;=]" / "'W'*[_A-Z]") _expr _expr;
+
+% arity3: IF, GET
+arity3 = "[IG]*[_A-Z]" _expr _expr _expr;
+
+% arity4: SUBSTITUTE
+arity4 = "'S'*[_A-Z]" _expr _expr _expr _expr;
+
+number = _"+d" ;
+string = _" '\"' *![\"] '\"' " / _" `'` *!['] `'` ";
+variable = _"[_a-z]*[_a-z0-9]" ;
+
+EOF_        = __ _"!." ;
+_           =    (_"+s" / _"+[[({})]]" / _"'#'N")* ;
