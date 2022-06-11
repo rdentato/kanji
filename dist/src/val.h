@@ -177,6 +177,14 @@ static inline val_t val_fromstr(void *v)             { return VAL_STR | ((uintpt
 
 #define valtail(...) valtop(__VA_ARGS__)
 
+#define valbufcpy(...) VAL_varargs(val_bufcpy, __VA_ARGS__)
+#define val_bufcpy2(d,s)     val_bufcpy4(d,s,0,-1)
+#define val_bufcpy3(d,s,o)   val_bufcpy4(d,s,o,-1)
+  val_t val_bufcpy4(val_t dst, char *src, int32_t start, int32_t n);
+
+#define valbufcat(d,s)      val_bufcpy4(d,s,-1,-1)
+
+
    void valclear(val_t v);
 
 int32_t valcount(val_t v);
@@ -623,10 +631,29 @@ val_t val_head2(val_t q, int32_t n)
   return ((val_t *)(vv->arr))[n] ;
 }
 
+val_t val_bufcpy4(val_t dst, char *src, int32_t start, int32_t n)
+{
+  char *p;
+  val_info_t vv;
+
+  if (valisbuf(dst)) {
+    vv = (val_info_t)valtoptr(dst);
+    if (n <= 0) n = strlen(src);
+    if (start < 0) start = vv->count;
+    if (!val_makeroom(vv,start+n+1,1)) return valnil;
+    p = (char *)(vv->arr);
+    strncpy(p+start,src,n);
+    vv->count = start+n;
+    p[vv->count] = '\0';
+    return dst;
+  }
+
+  return valnil;
+}
+
 val_t valmap(int32_t sz)
 {
-  
-  return valnil;
+    return valnil;
 }
 
 int32_t valmapset(val_t map, val_t k, val_t v)

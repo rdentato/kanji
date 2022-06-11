@@ -23,11 +23,11 @@ A value can be:
 > ** 00 YY XX .. SYS m.f R[X] R[Y]   ; Call the function m.f with R[X] as return and R[Y] as argument
 > ** 00 YY XX .. STO R[X] R[Y]       ; R[X] <- R[Y]
 > -* VV VV XX .. ST2 R[X] V          ; R[X] <- v 16 bit integer
-> -* 00 00 XX .. ST4 R[X] V          ;*R[X] <- v 32 bit integer (in next 4 bytes)
-> -* 00 00 XX .. ST8 R[X] V          ;*R[X] <- v in next 8 bytes (val)
+> -* 00 00 XX .. ST4 R[X] V          ; R[X] <- v 32 bit integer (in next 4 bytes)
+> -* 00 00 XX .. ST8 R[X] V          ; R[X] <- v in next 8 bytes (val)
 > -* 00 YY XX .. STI R[X] @ZZ[YY]    ; ZZ in next 4 bytes
 > -* NN NN XX .. STN R[X] @ZZ[NN]    ; ZZ in next 4 bytes
-> ** 00 YY XX .. STR R[X] R[Y]       ; Store in R[X] the (ptr to the) string at offset R[Y
+> ** 00 YY XX .. STR R[X] R[Y]       ; Store in R[X] the (ptr to the) global string at offset R[Y]
 > -* 00 00 XX .. S7R R[X] n          ; Same as STR but n in next 4 bytes 
 > ** 00 YY XX .. CMP R[X] R[Y]       ; 
 > -* nn nn XX .. CP2 R[X] n          ; 
@@ -65,13 +65,18 @@ A value can be:
 > ** 00 YY XX .. LEN R[X] R[Y]       ; count of vector elements (for STR includes the '\0')
 > ** 00 YY XX .. SZE R[X] R[Y]       ; size of vector (max available space)
 > ** 00 YY XX .. PSH R[X] R[Y]       ; R[X] is a stack (push R[Y])
+> -* nn nn 00 .. PS2 n
+> -* 00 00 00 .. PS4 n
+> -* 00 00 00 .. PS8 n
+> -* 00 YY XX .. PSI R[X] @ZZ[YY]    ; ZZ in next 4 bytes
+> -* NN NN XX .. PSN R[X] @ZZ[NN]    ; ZZ in next 4 bytes
 > ** ZZ YY XX .. TOP R[X] R[Y] R[Z]  ; R[Y] is a stack (R[X] <- nth element from top)
 > -* nn YY XX .. T0P R[X] R[Y] n     ; R[Y] is a stack (R[X] <- nth element from top)
 > ** nn nn XX .. DRP R[X] n          ; Remove last elements in vec or top of stack
-> *  00 YY XX .. ENQ R[X] R[Y]
-> *  ZZ YY XX .. NXQ R[X] R[Y] R[Z]  ; R[Y] ia a queue ((R[X] <- nth element from first)
-> -  nn YY XX .. N0Q R[X] R[Y] n     ; R[Y] ia a queue ((R[X] <- nth element from first)
-> *  nn nn XX .. DEQ R[X] n          ; Remove first n elements in the queue
+> ** 00 YY XX .. ENQ R[X] R[Y]
+> ** ZZ YY XX .. NXQ R[X] R[Y] R[Z]  ; R[Y] ia a queue ((R[X] <- nth element from first)
+> -* nn YY XX .. N0Q R[X] R[Y] n     ; R[Y] ia a queue ((R[X] <- nth element from first)
+> ** nn nn XX .. DEQ R[X] n          ; Remove first n elements in the queue
 >    00 YY XX .. POS R[X] R[Y]       ; Set cur element of R[X] to R[Y]
 >    ZZ YY XX .. CPY R[X] R[Y] R[Z]  ; Copy R[Z] element from buf/vec/str in R[Y] to buf/vec/str in R[XX] (must be same type)
 > ** nn nn nn .. JEQ n

@@ -298,24 +298,32 @@ static char *arg_S_C_R(kaj_pgm_t pgm, uint32_t op, char *s, char *start, uint8_t
   return t;
 }
 
-static char *arg_STO_CMP(kaj_pgm_t pgm, uint32_t op, char *start)
+static char *arg_STO_CMP_PSH(kaj_pgm_t pgm, uint32_t op, char *start)
 {
   char *s = start;
   char *t = s;
   uint32_t reg;
-
+ 
   uint8_t op2 = TOK_ST2;
   uint8_t op4 = TOK_ST4;
   uint8_t op8 = TOK_ST8;
   uint8_t opI = TOK_STI;
   uint8_t opN = TOK_STN;
   
-  if (op == TOK_CMP) {
-    op2 = TOK_CP2;
-    op4 = TOK_CP4;
-    op8 = TOK_CP8;
-    opI = TOK_CPI;
-    opN = TOK_CPN;
+  switch (op) {
+    case TOK_CMP: op2 = TOK_CP2;
+                  op4 = TOK_CP4;
+                  op8 = TOK_CP8;
+                  opI = TOK_CPI;
+                  opN = TOK_CPN;
+                  break;
+                  
+    case TOK_PSH: op2 = TOK_PS2;
+                  op4 = TOK_PS4;
+                  op8 = TOK_PS8;
+                  opI = TOK_PSI;
+                  opN = TOK_PSN;
+                  break;
   }
 
   if (!skp(s,"'%'x?x W",&t)) throw(ERR_INVALID_REG,0);
@@ -732,9 +740,10 @@ int32_t kaj_addline(kaj_pgm_t pgm, char *line)
 
       switch (op) {
 
+        case TOK_PSH :
         case TOK_CMP : 
         case TOK_STO : 
-          t = arg_STO_CMP(pgm,op,t);
+          t = arg_STO_CMP_PSH(pgm,op,t);
           break;
         
         case TOK_JEQ :
@@ -779,7 +788,6 @@ int32_t kaj_addline(kaj_pgm_t pgm, char *line)
           t = arg_1_regs(pgm,op,t);
           break;
 
-        case TOK_PSH :
         case TOK_ENQ :
         case TOK_LEN :
         case TOK_SZE :

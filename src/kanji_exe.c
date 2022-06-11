@@ -599,6 +599,39 @@ int kaj_step(kaj_pgm_t pgm)
       valpush(pgm->lst.regs[(op >> 8) & 0xFF], pgm->lst.regs[(op >> 16) & 0xFF]);
       break;
 
+    case TOK_PS2: 
+      v = val(((int32_t)op)>>16);
+      valpush( pgm->lst.regs[(op >> 8) & 0xFF], v);
+      break;
+
+    case TOK_PS4:
+      v = val((int32_t)(pgm->pgm[pgm->cur_ln++]));
+      valpush( pgm->lst.regs[(op >> 8) & 0xFF], v);
+      break;
+
+    case TOK_PS8:
+      memcpy( &v, &(pgm->pgm[pgm->cur_ln]), 8);
+      v = const2str(pgm->str,v);
+      valpush( pgm->lst.regs[(op >> 8) & 0xFF], v);
+      pgm->cur_ln+=2;
+      break;
+
+    case TOK_PSI:
+      n = valtoint(pgm->lst.regs[(op & 0x00FF0000) >> 16]);
+      memcpy( &v, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
+      v = const2str(pgm->str,v);
+      valpush( pgm->lst.regs[(op >> 8) & 0xFF], v);
+      pgm->cur_ln++;
+      break;
+
+    case TOK_PSN:
+      n = op >> 16;
+      memcpy( &v, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
+      v = const2str(pgm->str,v);
+      valpush( pgm->lst.regs[(op >> 8) & 0xFF], v);
+      pgm->cur_ln++;
+      break;
+
     case TOK_T0P:
       reg = (op >> 8) & 0xFF; 
       pgm->lst.regs[reg] = valtop(pgm->lst.regs[(op >> 16) & 0xFF], op>>24);

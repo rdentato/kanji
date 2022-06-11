@@ -6,13 +6,15 @@ SKPGEN=../dist/bin/skp
 CC=gcc
 #CC=clang
 
+AR=ar -r
+
 OPT=-O2 -DDEBUG=DEBUG_TEST
 OPT+=-fdata-sections -ffunction-sections
 #OPT+=-ggdb3 -O0
 
 #PROFFLAGS=-pg
 
-LNFLAGS= $(PROFFLAGS) -lm
+LNFLAGS= $(PROFFLAGS) -L. -lkaj -lm 
 LNFLAGS+=-s -Wl,--gc-sections
 
 CFLAGS = $(PROFFLAGS) $(OPT) -Wall -I$(TOP)/src -I$(TOP)/dist/src
@@ -22,8 +24,14 @@ OP_HDRS=opcodes_str.h opcodes_tok.h
 
 all:  kanji
 
-kanji: $(OP_HDRS) $(OBJS) kanji_asm.o kanji.o
-	$(CC) -o $@ $(OBJS) kanji_asm.o kanji.o $(LNFLAGS) 
+kanji: libkaj.a kanji.o
+	$(CC) -o $@ kanji.o $(LNFLAGS) 
+
+# kanji: $(OP_HDRS) $(OBJS) kanji_asm.o kanji.o
+# 	$(CC) -o $@ $(OBJS) kanji_asm.o kanji.o $(LNFLAGS) 
+
+libkaj.a: $(OP_HDRS) $(OBJS) kanji_asm.o 
+	$(AR) $@ $(OBJS) kanji_asm.o
 
 kanji_run: $(OP_HDRS) $(OBJS)
 	$(CC) -o $@ $(OBJS) $(LNFLAGS) 
@@ -57,4 +65,4 @@ syslib.c: kanji_sys syslib/*.c
 	rm -f syslib.tmp syslib.fnc
 
 clean:
-	$(RM) *.o kanji_sys kanji $(OP_HDRS) syslib*.???
+	$(RM) *.o kanji_sys kanji $(OP_HDRS) syslib*.??? libkaj.a

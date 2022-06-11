@@ -10,9 +10,9 @@ OPT=-O2
 CFLAGS =  $(OPT) -Wall
 #LNFLAGS=-Wl,--gc-sections
 
-all: skpgen 
+binaries: bin/skpgen 
 
-skpgen:
+bin/skpgen: src/skpgen.c
 	cd src; $(CC) $(CFLAGS) -s -o ../bin/skpgen skpgen.c $(LNFLAGS)
 
 clean:
