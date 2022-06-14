@@ -1,1 +1,5 @@
-; OUTPUT 3 = a 1
+; = a 1 
+; = b 2
+: OUTPUT ++ a b 3
+: = (+ "x" n)  32
+TRUE

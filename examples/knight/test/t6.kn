@@ -1,0 +1,4 @@
+= i 0
+WHILE < i 10
+  ; OUTPUT i
+  : = i (+ i 1)

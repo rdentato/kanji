@@ -1,0 +1,2 @@
+= incr BLOCK = x (+ x 1)
+CALL incr
