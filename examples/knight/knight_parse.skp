@@ -1,30 +1,107 @@
 % # knight
 % https://github.com/knight-lang/knight-lang/blob/master/specs.md
 
-prog = _expr+ _EOF_;
+{
+  #include "val.h"
 
-expr = __ (function / number / string / variable) ;
+  static val_t vars = valnil;
 
-function = _arity0 / _arity1 #?1 / _arity2 #?2 / _arity3 #?3 / _arity4 #?4;
+  static int32_t chkfunction(char *ops, char **start)
+  {
+    char *instr = NULL;
+    char *s = *start;
+    if (*s) instr = strchr(ops, (int)*s);
+    if (instr == NULL) {*start = NULL; return 0;}
+    if ('A' <= *s && *s <= 'Z') {
+      while (('A' <= *s && *s <= 'Z') || (*s == '_')) {
+       s++;
+      }
+    }
+    else 
+      s++;
+    *start = s;
+    return 255;
+  }
+
+  skpfunc(func_0) {return chkfunction("TFNPR",&skpcur); }
+  skpfunc(func_1) {return chkfunction("ECQLDOA!`~",&skpcur); }
+  skpfunc(func_2) {return chkfunction("-+*/%^<>?&|;",&skpcur); }
+  skpfunc(func_3) {return chkfunction("G",&skpcur); }
+  skpfunc(func_4) {return chkfunction("S",&skpcur); }
+
+  skpfunc(string) {
+    int32_t len = 0;
+    char quote = skpcur[-1];
+    while (*skpcur && (*skpcur != quote)) {skpcur++; len++ ; };
+    return len;
+  }
+
+  skpfunc(quote) {
+    if (*skpcur != '"' && *skpcur != '\'') { skpcur = NULL; return 0;}
+    skpcur++; return 0;
+  }
+
+  skpfunc(variable) {
+    if ((*skpcur != '_') && ((*skpcur < 'a') || ('z' < *skpcur))) { skpcur = NULL; return 0;}
+     
+    if (vars == valnil) vars = valvec(100);
+ 
+    valpush(vars,val(skpcur));
+
+    while(   (*skpcur == '_')
+          || (('a' <= *skpcur) && (*skpcur <= 'z'))  
+          || (('0' <= *skpcur) && (*skpcur <= '9')))
+      skpcur++;
+
+    return 0;
+  }
+
+} 
+
+prog = _expr+ _EOF_  prog_end {astaux(astcur)=&vars;} ;
+prog_end = {} ;
+
+expr = __ (instr / number / _string_ / variable[] ) ;
+
+instr = _arity0 / _arity1 / _arity2 / _arity3 / _arity4;
 
 % TRUE, FALSE, NULL, PROMPT, RANDOM
-arity0 = _"[TFNPR]*[_A-Z]" ;
+arity0 = #255 func_0[] ;
 
 % EVAL, BLOCK, CALL, QUIT, LENGTH, DUMP, OUTPUT, ASCII, !, :, `, ~
-arity1 = ("[EBCQLDOA]*[_A-Z]" / "[!:`~]") _expr ;
+arity1 = block / func_1[] _<expr ;       %  ':' is considered whitespace 
 
-% +, -, *, /, %, ^, <, >, ?, &, |, ;, =, WHILE
-arity2 = ("[-+*/%^<>?&|;=]" / "'W'*[_A-Z]") _expr _expr;
+block = _"'B'*[A-Z_]" _expr block_ret;
+block_ret = {} ;
+
+% =, +, -, *, /, %, ^, <, >, ?, &, |, ;, WHILE
+arity2 = assign <assign_args / _while_ / func_2[] <args2 ;
+args2 = _expr _expr;
+
+assign = _'=' ;
+assign_args = (__ varref / _expr) _<expr;
+varref = _variable[] ;
+
+while_ = _"'W'*[A-Z_]" _expr while_check _expr while_end ;
+while_check = {} ;
+while_end = {} ;
 
 % arity3: IF, GET
-arity3 = "[IG]*[_A-Z]" _expr _expr _expr;
+arity3 = _if_ / func_3[]  <args3;
+args3 = _expr _expr _expr ;
+
+if_ = _"'I'*[A-Z_]" _expr if_then _expr if_else _expr if_end;
+if_then = {} ;
+if_else = {} ;
+if_end = {} ;
 
 % arity4: SUBSTITUTE
-arity4 = "'S'*[_A-Z]" _expr _expr _expr _expr;
+arity4 = func_4[] <args4;
+args4 = _expr _expr _expr _expr;
 
 number = _"+d" ;
-string = _" '\"' *![\"] '\"' " / _" `'` *!['] `'` ";
-variable = _"[_a-z]*[_a-z0-9]" ;
+
+string_ = _quote[] string[] _quote[] ;
 
 EOF_        = __ _"!." ;
-_           =    (_"+s" / _"+[[({})]]" / _"'#'N")* ;
+_           =    (_"+s" / _"+[[({:})]]" / _"'#'N")* ;

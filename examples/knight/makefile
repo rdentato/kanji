@@ -2,15 +2,15 @@ TOP = ../..
 SKP = $(TOP)/dist/bin/skpgen
 INCDIR = $(TOP)/dist/src
 
-CFLAGS =  -O2 -Wall -I $(INCDIR)
+CFLAGS =  -O2 -Wall -I $(INCDIR) -DDEBUG=DEBUG_TEST
 
 %.o : %.c
 	$(CC) $(CFLAGS) -c $<
 
 all: skpgen kntest
 
-kntest: knight_parse.o kntest.o
-	$(CC) -s -o $@ knight_parse.o kntest.o
+kntest: knight_parse.o knight_walk.o kntest.o
+	$(CC) -s -o $@ knight_parse.o knight_walk.o kntest.o
 
 knight_parse.c: knight_parse.skp
 	$(SKP) knight_parse

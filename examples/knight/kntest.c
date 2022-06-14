@@ -1,5 +1,9 @@
 #include <stdio.h>
 #include <stdint.h>
+#define DEBUG DEBUG_TEST
+#include "dbg.h"
+#define VAL_MAIN
+#include "val.h"
 #define SKP_MAIN
 #include "knight_parse.h"
 
@@ -46,6 +50,61 @@ void usage()
   fprintf(stderr,"  Parse kntest sourcefile\n");
   exit(1);
 }
+
+static inline int isvarchr(char c)
+{
+  return (c=='_') || (('a'<=c) && (c<='z'));
+}
+
+int varcmp(const void *a, const void *b)
+{
+  char *pa = valtostr(*((val_t *)a));
+  char *pb = valtostr(*((val_t *)b));
+
+ _dbgtrc("'%c' '%c'",*pa,*pb);
+  while (isvarchr(*pa)) {
+    if (!isvarchr(*pb)) return 1;
+    if (*pa != *pb) return (*pa - *pb);
+    pa++;
+    pb++;
+  }
+
+  if (isvarchr(*pb)) return -1;
+  return 0;
+}
+
+void fixvars(val_t v)
+{
+  if (!valisvec(v) || valcount(v) == 0) return;
+  val_t *arr;
+  char *s;
+
+  arr = valarray(v);
+
+  qsort(arr,valcount(v),sizeof(val_t),varcmp);
+
+  int j = 0;
+  int k = 1;
+
+  while (k < valcount(v)) {
+    if (varcmp(arr+j, arr+k) != 0) {
+      j++;
+      if (j != k) arr[j] = arr[k];
+    }
+    k++;
+  }
+
+  valcount(v,j+1);
+
+  for (k=0; k< valcount(v); k++) {
+    s = valtostr(arr[k]);
+    while (isvarchr(*s)) 
+      fputc(*s++,stderr);
+    fputc('\n',stderr);
+  }
+}
+
+val_t kneval(ast_t ast);
 
 int main(int argc, char *argv[])
 {
@@ -95,9 +154,21 @@ int main(int argc, char *argv[])
     hdr = fopen(fnamebuf,"w");
     if (hdr) {
       astprint(ast,hdr);
+      fprintf(hdr,"%d nodes\n",astnumnodes(ast));
       fclose(hdr); hdr = NULL;
       fprintf(stderr,"Open '%s' to analyze the AST\n",fnamebuf);
+      val_t v = *((val_t *)astaux(ast));
+      if (v != valnil) {
+        fixvars(v);
+        fprintf(stderr,"Vars: %d\n",valcount(v));
+      }
     }
+
+    val_t retevl;
+    retevl = kneval(ast);
+
+    fprintf(stderr,"RET: %lX\n",retevl);
+
 #if 0
     sprintf(fnamebuf,"%s"".c",bnamebuf);
     src = fopen(fnamebuf,"w");
