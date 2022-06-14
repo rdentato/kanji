@@ -75,7 +75,7 @@ block = _"'B'*[A-Z_]" _expr block_ret;
 block_ret = {} ;
 
 % =, +, -, *, /, %, ^, <, >, ?, &, |, ;, WHILE
-arity2 = assign <assign_args / _while_ / func_2[] <args2 ;
+arity2 = assign <assign_args / _while_ / _and_ / _or_ / func_2[] <args2 ;
 args2 = _expr _expr;
 
 assign = _'=' ;
@@ -85,6 +85,13 @@ varref = _variable[] ;
 while_ = _"'W'*[A-Z_]" _expr while_check _expr while_end ;
 while_check = {} ;
 while_end = {} ;
+
+and_ = _'&' _expr and_check _expr andor_end ;
+or_  = _'|' _expr  or_check _expr andor_end ;
+
+and_check = {} ;
+or_check = {} ;
+andor_end = {} ;
 
 % arity3: IF, GET
 arity3 = _if_ / func_3[]  <args3;
