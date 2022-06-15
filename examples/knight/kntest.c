@@ -108,13 +108,13 @@ val_t kneval(ast_t ast);
 
 int main(int argc, char *argv[])
 {
-  char *loxbuf = NULL;
+  char *knbuf = NULL;
   ast_t ast = NULL;
   FILE *src=NULL;
   FILE *hdr=NULL;
   char *s;
   int trc =0;
-  
+
   if (argc<2) usage();
 
   s = argv[1];
@@ -125,11 +125,11 @@ int main(int argc, char *argv[])
     s = argv[2];
   }
 
-  loxbuf = loadsource(s);
+  knbuf = loadsource(s);
 
-  if (!loxbuf) usage();
+  if (!knbuf) usage();
 
-  ast = skpparse(loxbuf,prog,trc);
+  ast = skpparse(knbuf,prog,trc);
 
   if (asthaserr(ast)) {
     trace("In rule: '%s'",asterrrule(ast));
@@ -185,6 +185,12 @@ int main(int argc, char *argv[])
   if (src) fclose(src);
   if (hdr) fclose(hdr);
    
-  if (loxbuf) free(loxbuf);
-  if (ast) astfree(ast);
+  if (knbuf) free(knbuf);
+  if (ast) {
+    if (astaux(ast) != NULL) {
+      val_t vars = *((val_t *)astaux(ast));
+      valfree(vars);
+    }
+    astfree(ast);
+  }
 }

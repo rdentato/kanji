@@ -20,14 +20,14 @@
     else 
       s++;
     *start = s;
-    return 255;
+    return 0xF0;
   }
 
-  skpfunc(func_0) {return chkfunction("TFNPR",&skpcur); }
-  skpfunc(func_1) {return chkfunction("ECQLDOA!`~",&skpcur); }
-  skpfunc(func_2) {return chkfunction("-+*/%^<>?&|;",&skpcur); }
-  skpfunc(func_3) {return chkfunction("G",&skpcur); }
-  skpfunc(func_4) {return chkfunction("S",&skpcur); }
+  skpfunc(func_0) {return 0+chkfunction("TFNPR",&skpcur); }
+  skpfunc(func_1) {return 1+chkfunction("ECQLDOA!`~",&skpcur); }
+  skpfunc(func_2) {return 2+chkfunction("-+*/%^<>?;",&skpcur); }
+  skpfunc(func_3) {return 3+chkfunction("G",&skpcur); }
+  skpfunc(func_4) {return 4+chkfunction("S",&skpcur); }
 
   skpfunc(string) {
     int32_t len = 0;
@@ -66,7 +66,7 @@ expr = __ (instr / number / _string_ / variable[] ) ;
 instr = _arity0 / _arity1 / _arity2 / _arity3 / _arity4;
 
 % TRUE, FALSE, NULL, PROMPT, RANDOM
-arity0 = #255 func_0[] ;
+arity0 = func_0[] ;
 
 % EVAL, BLOCK, CALL, QUIT, LENGTH, DUMP, OUTPUT, ASCII, !, :, `, ~
 arity1 = block / func_1[] _<expr ;       %  ':' is considered whitespace 
@@ -78,6 +78,8 @@ block_ret = {} ;
 arity2 = assign <assign_args / _while_ / _and_ / _or_ / func_2[] <args2 ;
 args2 = _expr _expr;
 
+% For assign, let's invert the arguments so that we will just drop the top
+% of the stack (the variable)
 assign = _'=' ;
 assign_args = (__ varref / _expr) _<expr;
 varref = _variable[] ;
@@ -88,7 +90,7 @@ while_end = {} ;
 
 and_ = _'&' _expr and_check _expr andor_end ;
 or_  = _'|' _expr  or_check _expr andor_end ;
-
+ 
 and_check = {} ;
 or_check = {} ;
 andor_end = {} ;

@@ -1,0 +1,43 @@
+; = x 2156
+; = y GET x 1 2
+: OUT y
+
+#WHILE 1
+#    ; = x P:
+#    : IF ? x "Q"
+#       : QUIT 1
+#       : OUT x
+#
+#; = x F
+#; OUT ! x
+#: OUT +xT
+
+#; = x + "A" "B"
+#: OUT x
+#; = x + "A" "23"
+#: OUT x
+#; = x + "A" 23
+#: OUT x
+
+#; = x A 65
+#; OUT L x
+#: OUT x
+#
+#; = x "B"
+#; OUT L x
+#: OUT A x
+
+#; = x P
+#; = y "Pippo"
+#; OUT x
+#; OUT L x
+#; OUT y
+#: OUT L y
+
+#; = x P
+#; OUT x
+#: OUT + 1 x
+
+#; = x "12"
+#; OUT ^ x 2
+#: OUT "Hello World!"
