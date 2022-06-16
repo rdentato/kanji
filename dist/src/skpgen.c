@@ -284,6 +284,7 @@ void generatecode(ast_t ast, FILE *src, FILE *hdr, int nl)
         if (repeat) { indent-=2; fprintf(src,"%*s}%c",indent,skpemptystr,nl); }
         repeat = '\0';
         modifier = 0;
+        fprintf(hdr,"extern char *skp_N_%.*s;\n",astcurlen, astcurfrom);
       }
 
       astcase(lu_func) {
@@ -297,10 +298,14 @@ void generatecode(ast_t ast, FILE *src, FILE *hdr, int nl)
         push(rpt);
         repeat = '\0';
         modifier = 0;
+        fprintf(hdr,"extern char *skp_N_%.*s;\n",astcurlen, astcurfrom);
       }
 
       astcase(lu_case) {
-        fprintf(src,"%*scase %.*s:%c",indent,skpemptystr,astcurlen,astcurfrom,nl);
+        if (strncmp("default",astcurfrom,7) == 0) 
+          fprintf(src,"%*sdefault :%c",indent,skpemptystr,nl);
+        else 
+          fprintf(src,"%*scase %.*s:%c",indent,skpemptystr,astcurlen,astcurfrom,nl);
         indent +=4;
       }
       
