@@ -160,15 +160,15 @@ int main(int argc, char *argv[])
       val_t v = *((val_t *)astaux(ast));
       if (v != valnil) {
         fixvars(v);
-        fprintf(stderr,"Vars: %d\n",valcount(v));
+        dbgtrc("Vars: %d\n",valcount(v));
       }
     }
 
     val_t retevl;
     retevl = kneval(ast);
 
-    fprintf(stderr,"RET: %lX\n",retevl);
-
+    dbgtrc("RET: %lX\n",retevl);
+    
 #if 0
     sprintf(fnamebuf,"%s"".c",bnamebuf);
     src = fopen(fnamebuf,"w");

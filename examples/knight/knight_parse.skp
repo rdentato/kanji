@@ -24,7 +24,7 @@
   }
 
   skpfunc(func_0) {return 0+chkfunction("TFNPR",&skpcur); }
-  skpfunc(func_1) {return 1+chkfunction("ECQLDOA!`~",&skpcur); }
+  skpfunc(func_1) {return 1+chkfunction("EQLDOA!`~",&skpcur); }
   skpfunc(func_2) {return 2+chkfunction("-+*/%^<>?;",&skpcur); }
   skpfunc(func_3) {return 3+chkfunction("G",&skpcur); }
   skpfunc(func_4) {return 4+chkfunction("S",&skpcur); }
@@ -69,9 +69,11 @@ instr = _arity0 / _arity1 / _arity2 / _arity3 / _arity4;
 arity0 = func_0[] ;
 
 % EVAL, BLOCK, CALL, QUIT, LENGTH, DUMP, OUTPUT, ASCII, !, :, `, ~
-arity1 = block / func_1[] _<expr ;       %  ':' is considered whitespace 
+arity1 = block block_ret / call _<expr / func_1[] _<expr ;       %  ':' is considered whitespace 
 
-block = _"'B'*[A-Z_]" _expr block_ret;
+call = _"'C'*[A-Z_]" ;
+
+block = _"'B'*[A-Z_]" _expr ;
 block_ret = {} ;
 
 % =, +, -, *, /, %, ^, <, >, ?, &, |, ;, WHILE

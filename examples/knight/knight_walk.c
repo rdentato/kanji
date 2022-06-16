@@ -4,6 +4,10 @@
 #include <stdlib.h>
 #include <time.h>
 
+static char *N_string="null";
+static char *F_string="false";
+static char *T_string="true";
+
 void die(char *err)
 {
   fprintf(stderr,"FATAL ERROR: %s\n",err);
@@ -66,7 +70,7 @@ void output(FILE *f, val_t a)
   switch(VALTYPE(a)) {
     case VALINT:  fprintf(f, "%d",valtoint(a)); break;
     case VALDBL:  fprintf(f, "%f",valtodbl(a)); break;
-    case VALNIL:  fprintf(f, ".NIL."); break;
+    case VALNIL:  fputs(N_string,f); break;
 
     case VALSTR:  
     case VALBUF:  n = valcount(a);
@@ -74,8 +78,8 @@ void output(FILE *f, val_t a)
                   if (n>0 && p[n-1] == '\\') { n--; nl = 0;}
                   fprintf(f, "%.*s",n,p); break;
 
-    default    :  if (a == valtrue) fprintf(f,".TRUE."); 
-                  else if (a == valfalse) fprintf(f,".FALSE."); 
+    default    :  if (a == valtrue) fputs(T_string,f);
+                  else if (a == valfalse) fputs(F_string,f);; 
   }
   if (nl) fputc('\n',f);
 }
@@ -166,6 +170,18 @@ void dofunc_1(eval_env_t *env, char f)
     case 'O' : output(stdout,a);
                break;
 
+    case '`' : valdrop(env->stack);
+               if (isstring(a)) {
+                   val_t buf;
+                   FILE *fp;
+                   buf = valbuf(500);
+                   fp = popen(valtostr(a),"r");
+                   valbufreadfile(buf,fp);
+                  _dbgtrc("Shell Result (%d):\n%s\n",valcount(buf),valtostr(buf));
+                   pclose(fp);
+                   valpush(env->stack,buf);
+               }
+               break;
   }
 }
 
@@ -251,7 +267,16 @@ void dofunc_3(eval_env_t *env, char f)
     c = valtop(env->stack);
     valdrop(env->stack,3);
 
-    if (isstring(a)) {
+    if (a == valtrue) {
+      p = T_string;
+    }
+    else if (a == valfalse) {
+      p = F_string;
+    }
+    else if (a == valnil) {
+      p = N_string;
+    }
+    else if (isstring(a)) {
       p = valtostr(a);
     }
     else {
@@ -278,6 +303,8 @@ val_t string_const(val_t stack, char *start, int32_t len)
   return val(start);
 }
 
+#define NODE_OFFSET 1
+
 val_t kneval(ast_t astcur)
 {
 
@@ -292,7 +319,6 @@ val_t kneval(ast_t astcur)
   env.vars_val  = valnil;
   env.bufs      = valnil;
   env.bufs_free = valnil;
-
 
   srand(time(0));
 
@@ -345,10 +371,14 @@ val_t kneval(ast_t astcur)
       }
       else if (astnodeis(astcur,curnode,while_check)) {
         val_t a = valtop(env.stack);
-        valdrop(env.stack);
+        dbgtrc("WHILE_CHECK drop: %lX",a);
         if (isfalse(a)) curnode = astlast(astcur,curnode);
+        else valdrop(env.stack);
       }
       else if (astnodeis(astcur,curnode,while_end)) {
+        val_t a = valtop(env.stack);
+        valdrop(env.stack);
+        dbgtrc("WHILE_end drop: %lX",a);
         curnode = astup(astcur,curnode);
       }
       else if (astnodeis(astcur,curnode, if_then, and_check)) {
@@ -371,10 +401,43 @@ val_t kneval(ast_t astcur)
           curnode = astright(astcur,curnode);
         }
       }
+      else if (astnodeis(astcur,curnode,block)) {
+        val_t addr = valconst(NODE_OFFSET,astdown(astcur,curnode));
+        curnode = astright(astcur,curnode);
+        valpush(env.stack,addr);
+      }
+      else if (astnodeis(astcur,curnode,block_ret)) {
+        val_t a = valtop(env.stack,-2);
+        val_t b = valtop(env.stack);
+        dbgtrc("BLOCK RETURN: %lX",a);
+        valdrop(env.stack,2);
+        valpush(env.stack,b);
+        if (!valisconst(NODE_OFFSET,a)) die("invalid return");
+        curnode = valtoint(a);
+      }
+      else if (astnodeis(astcur,curnode,call)) {
+        val_t a = valtop(env.stack);
+        if (!valisconst(NODE_OFFSET,a)) die("invalid block");
+        valdrop(env.stack);
+        val_t r = valconst(NODE_OFFSET,curnode);
+        valpush(env.stack,r);
+        dbgtrc("CALL %lX ret: %lX",a,r);
+        curnode = valtoint(a);
+      }
     }
+//    else { // NODE EXIT
+//      if (astnodeis(astcur,curnode,while_end)) {
+//        val_t a = valtop(env.stack);
+//        valdrop(env.stack);
+//        dbgtrc("WHILE_end last drop: %lX",a);
+//      }
+//    }
     curnode = astnext(astcur,curnode);
   }
   top = valtop(env.stack);
+  
+  dbgtrc("FINAL DEPTH: %d",valcount(env.stack));
+
   valfree(env.vars_val);
   valfree(env.stack);
   
