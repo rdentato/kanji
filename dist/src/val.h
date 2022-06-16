@@ -32,14 +32,20 @@
 typedef uint64_t val_t;
 
 typedef struct val_info_s {
+     val_t aux;    // For GC (but not necessarily)
      void *arr;
-     void *nxt;
   int32_t  size;
   int32_t  count;
   int32_t  first;
   int32_t  prv_sz;
-  int32_t  refs;
 } *val_info_t;
+
+typedef struct val_map_s {
+  val_t   key;
+  val_t   val;
+  uint32_t left;
+  uint32_t right;
+} *val_map_t;
 
 #define VAL_MASK      0xFFFF000000000000llu
 #define VAL_NANMASK   0x7FFC000000000000llu
@@ -57,6 +63,7 @@ typedef struct val_info_s {
 #define valerror         0x7FFE1000FFFFFFFFllu
 
 extern char *val_nilstr;
+
 #define valnilstr (val(val_nilstr))
 
 #define valconst(n,x)   (0x7FFE200000000000llu | ((uint64_t)((n) & 0xF)) << 32 | (uint32_t)(x))
@@ -103,24 +110,12 @@ static inline int VALTYPE(val_t v)
   return (int)((v)>>48); 
 }
 
-static inline int32_t valtoint(val_t v);
-
-static inline double valtodbl(val_t v) 
-{ double d = 0.0; 
-  if (valisdbl(v)) memcpy(&d,&v,8);
-  else d = (double)(v & VAL_INTMASK);
-  return d;
-}
-
-static inline int32_t valtoint(val_t v)
-{ if (valisdbl(v)) return (int32_t)valtodbl(v);
-  return (int32_t)(v & VAL_INTMASK); 
-}
+char *valtostr(val_t v);
+double valtodbl(val_t v);
+int32_t valtoint(val_t v);
 
 static inline void *valtoptr(val_t v)
 { return (void *)((uintptr_t)(v & VAL_PTRMASK)); }
-
-char *valtostr(val_t v);
 
 static inline val_t val_fromint(int v)               { uint64_t ret = v; return VAL_INT | (ret & VAL_INTMASK);}
 static inline val_t val_fromchar(char v)             { uint64_t ret = v; return VAL_INT | (ret & VAL_INTMASK);}
@@ -157,12 +152,14 @@ static inline val_t val_fromstr(void *v)             { return VAL_STR | ((uintpt
   val_t valget(val_t v, val_t i);
   val_t valpush(val_t v, val_t x);
 
+#define valarray(v) (((val_info_t)valtoptr(v))->arr)
+
 #define valdrop(...) VAL_varargs(val_drop,__VA_ARGS__)
 #define val_drop1(v) val_drop2(v,-1)
   val_t val_drop2(val_t v, int32_t n);
 
 #define valtop(...) VAL_varargs(val_top,__VA_ARGS__)
-#define val_top1(v)   val_top2(v,-1)
+#define val_top1(v) val_top2(v,-1)
   val_t val_top2(val_t v, int32_t n);
 
   val_t valenq(val_t q, val_t x);
@@ -184,10 +181,29 @@ static inline val_t val_fromstr(void *v)             { return VAL_STR | ((uintpt
 
 #define valbufcat(d,s)      val_bufcpy4(d,s,-1,-1)
 
+#define valbufgets(...) VAL_varargs(val_bufgets, __VA_ARGS__)
+#define val_bufgets1(b)    val_bufgets3(b,stdin,0)
+#define val_bufgets2(b,f)  val_bufgets3(b,f,0)
+int32_t val_bufgets3(val_t b, FILE *f, int32_t start);
+
+#define valbufreadfile(...) VAL_varargs(val_bufreadfile, __VA_ARGS__)
+#define val_bufreadfile1(b)     val_bufreadfile3(b,stdin,0)
+#define val_bufreadfile2(b,f)   val_bufreadfile3(b,f,0)
+int32_t val_bufreadfile3(val_t b, FILE *f, int32_t start);
+
+
+#define val_bufcatgets(b,f)   val_bufgets3(b,f,-1)
 
    void valclear(val_t v);
 
-int32_t valcount(val_t v);
+#define valcount(...) VAL_varargs(val_count, __VA_ARGS__)
+#define val_count1(v) val_count2(v,-1)
+int32_t val_count2(val_t v,int32_t n);
+
+#define valaux(...) VAL_varargs(val_aux, __VA_ARGS__)
+#define val_aux1(v) val_aux2(v,valfalse)
+  val_t val_aux2(val_t v, val_t p);
+
 int32_t valsize(val_t v);
 
   val_t valfree(val_t v);
@@ -222,17 +238,19 @@ int32_t valsize(val_t v);
 
 char *val_nilstr = "";
 
-#define val_cmp_(x,y) ((x)<(y)?-1:((x)==(y))?0:1)
+#define val_cmp_(x,y) (((x)<(y))?-1:(((x)==(y))?0:1))
+
+
 int valcmp(val_t a, val_t b)
 {
   if (a == b) return 0;
   switch(VALTYPE(a)) {
-    case VALINT: if (valisint(b)) return val_cmp_(valtoint(a), valtoint(b));
-                 if (valisdbl(b)) return val_cmp_(valtoint(a), valtodbl(b));
+    case VALINT: if (valisint(b)) { return val_cmp_(valtoint(a), valtoint(b)); }
+                 if (valisdbl(b)) { return val_cmp_(valtoint(a), valtodbl(b)); }
                  break;
 
-    case VALDBL: if (valisint(b)) return val_cmp_(valtodbl(a), valtoint(b));
-                 if (valisdbl(b)) return val_cmp_(valtodbl(a), valtodbl(b));
+    case VALDBL: if (valisint(b)) { return val_cmp_(valtodbl(a), valtoint(b)); }
+                 if (valisdbl(b)) { return val_cmp_(valtodbl(a), valtodbl(b)); }
                  break;
 
     case VALBUF:
@@ -365,6 +383,7 @@ val_t valasr(val_t a, val_t n)
 val_t valfree(val_t v)
 {
   switch (VALTYPE(v)) {
+    case VALMAP:
     case VALBUF:
     case VALVEC: { val_info_t vv = valtoptr(v);
                    free(vv->arr);
@@ -384,7 +403,7 @@ static int val_makeroom(val_info_t vv, int32_t i, int32_t esz)
   uint32_t prv_sz;
   uint32_t tmp_sz;
   val_t *new_arr;
-  if ( i >= vv->size) {
+  if ( i > vv->size) {
     new_sz = vv->size;
     prv_sz = vv->prv_sz;
     while (new_sz <= i) { // Grow by fibonacci seq 0,4,4,8,12,20, ...
@@ -405,28 +424,36 @@ static int val_makeroom(val_info_t vv, int32_t i, int32_t esz)
 
 val_t valresize(val_t v, int32_t sz)
 {
-  
-  if (valisvec(v)) {
-    val_makeroom(valtoptr(v), sz, sizeof(val_t));
-    return v;
+  int32_t esz = 1;
+  int32_t nsz = 1;
+
+  switch(VALTYPE(v)) {
+    case VALMAP: while (nsz < sz) nsz <<= 1;
+                 sz = nsz;
+                 esz = sizeof(struct val_map_s);
+                 break;
+
+    case VALVEC: esz = sizeof(val_t);            
+                 break;
+
+    case VALBUF: break;
+
+    default: return valnil;
   }
 
-  if (valisbuf(v)) {
-    val_makeroom(valtoptr(v), sz, 1);
-    return v;
-  }
-
-  return valnil;
+  val_makeroom(valtoptr(v), sz, esz);
+  return v;
 }
 
 int32_t valsize(val_t v)
 {
   val_info_t vv;
-  dbgtrc("TYPE: %X",VALTYPE(v));
+ _dbgtrc("TYPE: %X",VALTYPE(v));
   vv = valtoptr(v);
   switch(VALTYPE(v)) {
     case VALSTR: return vv ?strlen((char *)vv)+1:0;
 
+    case VALMAP: 
     case VALBUF: 
     case VALVEC: return vv ? vv->size : 0;
                  
@@ -435,19 +462,33 @@ int32_t valsize(val_t v)
   return 0;
 }
 
-int32_t valcount(val_t v)
+int32_t val_count2(val_t v, int32_t n)
 {
   val_info_t vv = valtoptr(v);
  _dbgtrc("CNT: %X", VALTYPE(v));
   switch (VALTYPE(v)) {
     case VALSTR: return vv ? strlen((char *)vv)+1:0;
 
-    case VALBUF:
-    case VALVEC: return vv ? vv->count - vv->first : 0;
+    case VALMAP:
+    case VALBUF: return vv ? vv->count - vv->first : 0;
+
+    case VALVEC: if (n>=0) vv->count = vv->first + n;
+                 return vv ? vv->count - vv->first : 0;
 
     default: dbgtrc("CNT OF: %lX",v);
   }
   return 0;
+}
+
+val_t val_aux2(val_t v, val_t p)
+{
+  val_info_t vv;
+  
+  vv = (val_info_t)(valtoptr(v));
+  if (p != valfalse) vv->aux = p;
+  p = vv->aux;
+
+  return p;
 }
 
 static val_t val_vec(int32_t sz, int32_t esz, val_t type)
@@ -463,7 +504,7 @@ static val_t val_vec(int32_t sz, int32_t esz, val_t type)
   vv->first = 0;
   vv->prv_sz = 4; // Start of Fibonacci seq 0,4,...
   vv->count = 0;
-  vv->nxt = NULL;
+  vv->aux = valnil;
 
   if ((sz > 0) && !val_makeroom(vv,sz,esz)) { 
     vv->size = 0;
@@ -481,6 +522,51 @@ val_t valvec(int32_t sz)
 val_t valbuf(int32_t sz)
 { return val_vec(sz, 1, VAL_BUF); }
 
+int32_t val_bufgets3(val_t b, FILE *f, int32_t i)
+{
+  int32_t n=0;
+  val_info_t vv;
+  char *arr;
+
+  if (b) {
+    vv = valtoptr(b);
+    _dbgtrc("readln[ i:%d sze: %d cnt: %d",i,b->sze, b->cnt );
+    if (i == -1) i = vv->count;
+    while (1) {
+      if (val_makeroom(vv,i+16,1)) {
+        arr = vv->arr;
+        arr[i] = '\0';
+        arr[vv->size-1] = '\xFF';
+
+        if (!fgets(arr+i,vv->size-i,f)) break;
+        
+        if (arr[vv->size-1] == '\xFF') {
+          while(arr[i]) { i++; n++; }
+          break;
+        }
+        n += vv->size-i;
+        i  = vv->size-1;
+      }
+    }
+    vv->count = i;
+    _dbgtrc("readln] sze: %d cnt: %d",b->sze,b->cnt);
+  }
+  return n;
+}
+
+int32_t val_bufreadfile3(val_t b, FILE *f, int32_t i)
+{
+  int32_t n = i;
+  val_info_t vv;
+  if (b) {
+    vv = valtoptr(b);
+    while (val_bufgets3(b,f,n)>0) {
+      n = vv->count ;
+    }
+  }
+  return n-i;
+}
+
 char *valtostr(val_t v)
 { 
   void *p = valtoptr(v);
@@ -492,6 +578,20 @@ char *valtostr(val_t v)
        return (char *)p;
   }
   return NULL;
+}
+
+double valtodbl(val_t v) 
+{ double d = 0.0; 
+  if (valisdbl(v)) memcpy(&d,&v,8);
+  else if (valisstr(v) || valisbuf(v)) d = atof(valtostr(v));
+  else d = (double)(v & VAL_INTMASK);
+  return d;
+}
+
+int32_t valtoint(val_t v)
+{ if (valisdbl(v)) return (int32_t)valtodbl(v);
+  if (valisstr(v) || valisbuf(v)) return(atoi(valtostr(v)));
+  return (int32_t)(v & VAL_INTMASK); 
 }
 
 val_t valset(val_t v, val_t i, val_t x)
@@ -563,6 +663,7 @@ void valclear(val_t v)
 {
   val_info_t vv;
   switch (VALTYPE(v)) {
+    case VALMAP:
     case VALBUF:
     case VALVEC: if ((vv = valtoptr(v)) != NULL) {
                      vv->count = vv->first = 0;
@@ -582,7 +683,7 @@ val_t valpush(val_t v, val_t x)
 val_t val_top2(val_t v, int32_t n)
 {
   if (n>0) n=-n;
-  dbgtrc("TOP n: %d",n);
+ _dbgtrc("TOP n: %d",n);
   return valget(v,val(n));
 }
 
@@ -653,7 +754,34 @@ val_t val_bufcpy4(val_t dst, char *src, int32_t start, int32_t n)
 
 val_t valmap(int32_t sz)
 {
+  val_info_t vv;
+  val_t vvec = valnil;
+
+  int32_t new_sz = 1;
+
+  if (sz <= 0) sz = 8;
+  while (new_sz < sz) new_sz <<= 1;
+  sz = new_sz;
+
+  vv = malloc(sizeof(struct val_info_s));
+  if (vv == NULL) return valnil;
+
+  vv->arr = NULL;
+  vv->size = sz;
+  vv->first = 0;
+  vv->prv_sz = sz;
+  vv->count = 0;
+  vv->aux = valnil;
+
+  vv->arr = malloc(sz * sizeof(struct val_map_s)); 
+  if (vv->arr == NULL) {
+    vv->size = 0;
+    free(vv);
     return valnil;
+  }
+
+  vvec = VAL_MAP | (((uintptr_t)vv) & VAL_PTRMASK);
+  return vvec;
 }
 
 int32_t valmapset(val_t map, val_t k, val_t v)
