@@ -251,6 +251,17 @@ void dofunc_2(eval_env_t *env, char f)
   }
 }
 
+char *cast2str(val_t a, char *num)
+{
+    if (a == valtrue)  return T_string;
+    if (a == valfalse) return F_string;
+    if (a == valnil)   return N_string;
+    if (isstring(a))   return valtostr(a);
+    
+    sprintf(num,"%d",valtoint(a));
+    return num;
+}
+
 void dofunc_3(eval_env_t *env, char f)
 {
   val_t a, b, c;
@@ -261,37 +272,74 @@ void dofunc_3(eval_env_t *env, char f)
     val_t buf;
     int32_t from;
     int32_t len;
+    int32_t l;
 
     a = valtop(env->stack,-3);
     b = valtop(env->stack,-2);
     c = valtop(env->stack);
     valdrop(env->stack,3);
 
-    if (a == valtrue) {
-      p = T_string;
-    }
-    else if (a == valfalse) {
-      p = F_string;
-    }
-    else if (a == valnil) {
-      p = N_string;
-    }
-    else if (isstring(a)) {
-      p = valtostr(a);
-    }
-    else {
-      sprintf(num,"%d",valtoint(a));
-      p = num;
-    }
+    p = cast2str(a, num);
+
     dbgtrc("GET A:%s",p);
     from = valtoint(b);
     len = valtoint(c);
-    if (len<=0 || from >= strlen(p) || *p == '\0') {
+    l = strlen(p);
+    if (from >= l || *p == '\0') {
       valpush(env->stack, valnilstr);
       return;
     }
+    if (len <=0) len = l;
     buf = addbuf(env);
     valbufcpy(buf,p+from,0,len);
+    valpush(env->stack, buf);
+  }
+  else die("unkonw function");
+}
+
+void dofunc_4(eval_env_t *env, char f)
+{
+  val_t a, b, c, d;
+  char num1[20];
+  char num2[20];
+  char *p1;
+  char *p2;
+  dbgtrc("F4: %c",f);
+  if (f == 'S') {
+    val_t buf;
+    int32_t from;
+    int32_t len;
+    int32_t l;
+
+    a = valtop(env->stack,-4);
+    b = valtop(env->stack,-3);
+    c = valtop(env->stack,-2);
+    d = valtop(env->stack);   
+    valdrop(env->stack,4);
+
+    p1 = cast2str(a, num1);
+    dbgtrc("SET A:%s",p1);
+    l = strlen(p1);
+
+    from = valtoint(b);
+    if (from < 0) from = 0;
+    if (from > l) from = l;
+
+    len = valtoint(c);
+    if ((len < from) || (from+len) > l) len = l - from;
+
+    p2 = cast2str(d, num2);
+    dbgtrc("SET D:%s",p2);
+
+    buf = addbuf(env);
+ 
+    valbufcpy(buf,p1,0,from);
+    dbgtrc("SET1: %s",valtostr(buf));
+    valbufcat(buf,p2);
+    dbgtrc("SET2: %s",valtostr(buf));
+    valbufcat(buf,p1+from+len);
+    dbgtrc("SET3: %s",valtostr(buf));
+
     valpush(env->stack, buf);
   }
   else die("unkonw function");
@@ -361,6 +409,7 @@ val_t kneval(ast_t astcur)
           case 0xF1: dofunc_1(&env,*start); break;
           case 0xF2: dofunc_2(&env,*start); break;
           case 0xF3: dofunc_3(&env,*start); break;
+          case 0xF4: dofunc_4(&env,*start); break;
           default:   die("unknown function");
         }
       }

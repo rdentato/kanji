@@ -1,0 +1,52 @@
+Open 'test/t13.t' to analyze the AST
+x
+y
+z
+TRCE: Vars: 3 kntest.c:163
+TRCE: VARREF: 0 (x "a) knight_walk.c:402
+TRCE: ASSIGN: knight_walk.c:418
+TRCE: VAR: 0 (x 0 ) knight_walk.c:397
+TRCE: NUM: 0 knight_walk.c:389
+TRCE: NUM: 1 knight_walk.c:389
+TRCE: FNC: S  knight_walk.c:406
+TRCE: F4: S knight_walk.c:307
+TRCE: SET A:abc knight_walk.c:321
+TRCE: SET D:2 knight_walk.c:332
+TRCE: SET1:  knight_walk.c:337
+TRCE: SET2: 2 knight_walk.c:339
+TRCE: SET3: 2bc knight_walk.c:341
+TRCE: VARREF: 1 (y S ) knight_walk.c:402
+TRCE: ASSIGN: knight_walk.c:418
+TRCE: VAR: 0 (x ~1) knight_walk.c:397
+TRCE: NUM: 1 knight_walk.c:389
+TRCE: FNC: ~  knight_walk.c:406
+TRCE: NUM: 1 knight_walk.c:389
+TRCE: FNC: ~  knight_walk.c:406
+TRCE: NUM: 3 knight_walk.c:389
+TRCE: FNC: S  knight_walk.c:406
+TRCE: F4: S knight_walk.c:307
+TRCE: SET A:abc knight_walk.c:321
+TRCE: SET D:3 knight_walk.c:332
+TRCE: SET1:  knight_walk.c:337
+TRCE: SET2: 3 knight_walk.c:339
+TRCE: SET3: 3 knight_walk.c:341
+TRCE: VARREF: 2 (z S ) knight_walk.c:402
+TRCE: ASSIGN: knight_walk.c:418
+TRCE: VAR: 0 (x
+; ) knight_walk.c:397
+TRCE: FNC: O  knight_walk.c:406
+TRCE: OUT TYPE: 65535 knight_walk.c:65
+TRCE: VAR: 1 (y
+: ) knight_walk.c:397
+TRCE: FNC: O  knight_walk.c:406
+TRCE: OUT TYPE: 65534 knight_walk.c:65
+TRCE: VAR: 2 (z) knight_walk.c:397
+TRCE: FNC: O  knight_walk.c:406
+TRCE: OUT TYPE: 65534 knight_walk.c:65
+TRCE: FNC: ;  knight_walk.c:406
+TRCE: FNC: ;  knight_walk.c:406
+TRCE: FNC: ;  knight_walk.c:406
+TRCE: FNC: ;  knight_walk.c:406
+TRCE: FNC: ;  knight_walk.c:406
+TRCE: FINAL DEPTH: 1 knight_walk.c:488
+TRCE: RET: FFFE562711866F70 kntest.c:170

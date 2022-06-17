@@ -1,6 +1,29 @@
-; = x 2156
-; = y GET x 1 2
-: OUT y
+; = hi BLOCK OUT "Hi!"
+; CALL hi
+; OUT hi
+; = x + hi 0
+; OUT x
+: CALL x
+
+
+
+#; = double_y BLOCK
+#           : = y *2y
+#; = y 3
+#; CALL double_y
+#; OUT y
+#: OUT GET T 2 2
+
+#; = blk BLOCK
+#      ; = x 19
+#      : WHILE > x 16
+#            ; OUT x
+#            : = x - x 1
+#; CALL blk
+#: OUT "done"
+#
+#
+
 
 #WHILE 1
 #    ; = x P:
