@@ -739,7 +739,8 @@ val_t val_bufcpy4(val_t dst, char *src, int32_t start, int32_t n)
 
   if (valisbuf(dst)) {
     vv = (val_info_t)valtoptr(dst);
-    if (n <= 0) n = strlen(src);
+    if (n < 0) n = strlen(src);
+    if (n==0) return dst;
     if (start < 0) start = vv->count;
     if (!val_makeroom(vv,start+n+1,1)) return valnil;
     p = (char *)(vv->arr);
