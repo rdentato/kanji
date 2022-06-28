@@ -32,12 +32,12 @@
 typedef uint64_t val_t;
 
 typedef struct val_info_s {
-     val_t aux;    // For GC (but not necessarily)
+     val_t aux;    // For GC (but not necessarily) It MUST be the first field!
      void *arr;
   int32_t  size;
   int32_t  count;
   int32_t  first;
-  int32_t  prv_sz;
+  int32_t  refs;   // For GC (but not necessarily)
 } *val_info_t;
 
 typedef struct val_map_s {
@@ -200,9 +200,14 @@ int32_t val_bufreadfile3(val_t b, FILE *f, int32_t start);
 #define val_count1(v) val_count2(v,-1)
 int32_t val_count2(val_t v,int32_t n);
 
+#define valnext  valaux
 #define valaux(...) VAL_varargs(val_aux, __VA_ARGS__)
 #define val_aux1(v) val_aux2(v,valfalse)
   val_t val_aux2(val_t v, val_t p);
+
+#define valrefs(...) VAL_varargs(val_refs, __VA_ARGS__)
+int32_t val_refs1(val_t v);
+int32_t val_refs2(val_t v, int32_t n);
 
 int32_t valsize(val_t v);
 
@@ -397,30 +402,52 @@ val_t valfree(val_t v)
   return valnil;
 }
 
+// static int val_makeroom(val_info_t vv, int32_t i, int32_t esz) 
+// {
+//   uint32_t new_sz;
+//   uint32_t prv_sz;
+//   uint32_t tmp_sz;
+//   val_t *new_arr;
+//   if ( i > vv->size) {
+//     new_sz = vv->size;
+//     prv_sz = vv->prv_sz;
+//     while (new_sz <= i) { // Grow by fibonacci seq 0,4,4,8,12,20, ...
+//       tmp_sz  = new_sz;
+//       new_sz += prv_sz;
+//       prv_sz  = tmp_sz;
+//     }
+//    _dbgtrc("i: %d prv: %d new: %d",i,vv->size, new_sz);
+// 
+//     new_arr = realloc(vv->arr, new_sz * esz);
+//     if (new_arr == NULL) return 0; // ERR
+//     vv->arr = new_arr;
+//     vv->size = new_sz;
+//     vv->prv_sz = prv_sz;
+//   }
+//   return 1; // OK
+// }
+
 static int val_makeroom(val_info_t vv, int32_t i, int32_t esz) 
 {
   uint32_t new_sz;
-  uint32_t prv_sz;
-  uint32_t tmp_sz;
   val_t *new_arr;
   if ( i > vv->size) {
-    new_sz = vv->size;
-    prv_sz = vv->prv_sz;
-    while (new_sz <= i) { // Grow by fibonacci seq 0,4,4,8,12,20, ...
-      tmp_sz  = new_sz;
-      new_sz += prv_sz;
-      prv_sz  = tmp_sz;
+    new_sz = vv->size + 2;
+
+    while (new_sz <= i) { 
+      new_sz += new_sz / 2 ; // Grow by 1.5
+      new_sz += new_sz & 1 ; // Plus one if odd
+     _dbgtrc("SZE: (%d) %d",i,new_sz);
     }
-   _dbgtrc("i: %d prv: %d new: %d",i,vv->size, new_sz);
 
     new_arr = realloc(vv->arr, new_sz * esz);
     if (new_arr == NULL) return 0; // ERR
     vv->arr = new_arr;
     vv->size = new_sz;
-    vv->prv_sz = prv_sz;
   }
   return 1; // OK
 }
+
 
 val_t valresize(val_t v, int32_t sz)
 {
@@ -467,13 +494,17 @@ int32_t val_count2(val_t v, int32_t n)
   val_info_t vv = valtoptr(v);
  _dbgtrc("CNT: %X", VALTYPE(v));
   switch (VALTYPE(v)) {
+    case VALNIL: return 0;
     case VALSTR: return vv ? strlen((char *)vv)+1:0;
 
     case VALMAP:
-    case VALBUF: return vv ? vv->count - vv->first : 0;
+    case VALBUF: if (vv == NULL) return 0;
+                 if (n >= 0) vv->count = n;
+                 return vv->count ;
 
-    case VALVEC: if (n>=0) vv->count = vv->first + n;
-                 return vv ? vv->count - vv->first : 0;
+    case VALVEC: if (vv == NULL) return 0;
+                 if (n>=0) vv->count = vv->first + n;
+                 return vv->count - vv->first ;
 
     default: dbgtrc("CNT OF: %lX",v);
   }
@@ -491,6 +522,32 @@ val_t val_aux2(val_t v, val_t p)
   return p;
 }
 
+int32_t val_refs1(val_t v)
+{
+  val_info_t vv = valtoptr(v);
+
+  switch (VALTYPE(v)) {
+    case VALMAP:
+    case VALBUF: 
+    case VALVEC: return vv->refs;
+  }
+  
+  return 0;
+}
+
+int32_t val_refs2(val_t v, int32_t n)
+{
+  val_info_t vv = valtoptr(v);
+
+  switch (VALTYPE(v)) {
+    case VALMAP:
+    case VALBUF: 
+    case VALVEC: return (vv->refs = n);
+  }
+  
+  return 0;
+}
+
 static val_t val_vec(int32_t sz, int32_t esz, val_t type)
 {
   val_info_t vv;
@@ -502,9 +559,9 @@ static val_t val_vec(int32_t sz, int32_t esz, val_t type)
   vv->arr = NULL;
   vv->size = 0;
   vv->first = 0;
-  vv->prv_sz = 4; // Start of Fibonacci seq 0,4,...
   vv->count = 0;
   vv->aux = valnil;
+  vv->refs = 0;
 
   if ((sz > 0) && !val_makeroom(vv,sz,esz)) { 
     vv->size = 0;
@@ -691,9 +748,11 @@ val_t val_drop2(val_t v, int32_t n)
 {
   val_info_t vv;
   if (!valisvec(v) || (vv = valtoptr(v)) == NULL) return valnil;
-  if (n<0) n = -n;
-  vv->count -= n;
-  if (vv->count <= vv->first) { vv->count = vv->first = 0; }
+  if (n != 0) {
+    if (n<0) n = -n;
+    vv->count -= n;
+    if (vv->count <= vv->first) { vv->count = vv->first = 0; }
+  }
   return val(vv->count - vv->first);
 }
 
@@ -770,7 +829,6 @@ val_t valmap(int32_t sz)
   vv->arr = NULL;
   vv->size = sz;
   vv->first = 0;
-  vv->prv_sz = sz;
   vv->count = 0;
   vv->aux = valnil;
 
