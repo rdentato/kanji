@@ -1,8 +1,0 @@
-; = x 1
-: WHILE < x 10 
-  ; OUT R
-  : = x+1x
-
-IF ? x 10 
- : OUT 100
- : OUT 200

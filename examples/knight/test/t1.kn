@@ -1,4 +1,0 @@
-# + = x 2 1
- ; = x 2
- ; OUTPUT + x 1
- : OUTPUT x

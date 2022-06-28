@@ -1,9 +1,0 @@
-# Collatz conjecture
-
-; = x 7      # <- Starting point
-; OUT x
-: WHILE > x 1
-  ; = x IF % x 2
-        : + * x 3 1
-        : / x 2
-  : OUT x
