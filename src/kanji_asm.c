@@ -1,3 +1,6 @@
+//  (C) by Remo Dentato (rdentato@gmail.com)
+//  License: https://opensource.org/licenses/MIT
+
 #include "kanji.h"
 #include "kanji_sys.h"
 
@@ -43,7 +46,7 @@ static uint32_t add_reg(kaj_pgm_t pgm, char *s)
 {
   uint32_t reg;
   reg = strtol(s+1,NULL,16);
-  if ((reg != 0xFF) && (pgm->max_regs < reg))
+  if ((reg != REG_NONE) && (pgm->max_regs < reg))
     pgm->max_regs = reg;
   return reg;
 }
@@ -256,7 +259,7 @@ static char *arg_S_C_R(kaj_pgm_t pgm, uint32_t op, char *s, char *start, uint8_t
       else if (skp(s,"D W ']' W",&t)) {
         k = strtol(s,NULL,10);
       }
-      dbgtrc("IND: k=%d s= %s",k,s);
+     _dbgtrc("IND: k=%d s= %s",k,s);
       if (k >= 0) {
         op |= ((k & 0xFFFF) << 16) | opN;
       }
@@ -401,7 +404,7 @@ static char *arg_JSR(kaj_pgm_t pgm, uint32_t op, char *start)
     reg = add_reg(pgm,s);
     s = t;
   }
-  else reg = 0xFF;
+  else reg = REG_NONE;
 
   if (skp(s, "'%'x?x W", &t)) {
     reg |= add_reg(pgm,s) << 8;
@@ -580,8 +583,8 @@ static char *arg_SYS(kaj_pgm_t pgm, uint32_t op, char *start)
   char *s = start;
   char *t = s;
   uint64_t fnum = 0;
-  uint8_t reg1 = 0xFF;
-  uint8_t reg2 = 0xFF;
+  uint8_t reg1 = REG_NONE;
+  uint8_t reg2 = REG_NONE;
   
  _dbgtrc("f: %s",t);
   fnum = kaj_sys_encode(&t);
@@ -709,7 +712,7 @@ static char *arg_VEC(kaj_pgm_t pgm, uint32_t op, char *start)
   return t;
 }
 
-int32_t kaj_addline(kaj_pgm_t pgm, char *line)
+int32_t kaj_add_line3(kaj_pgm_t pgm, char *line, char **lnend)
 {
   char *s = line;
   char *t = s;
@@ -864,6 +867,7 @@ int32_t kaj_addline(kaj_pgm_t pgm, char *line)
   
     skp(s,"';' *!n",&s);
     skp(s,"W",&s);
+    if (lnend) *lnend = s;
     throwif (*s != '\0' && *s != '\n', ERR_SYNTAX);
   }
   catchall {
@@ -1028,3 +1032,16 @@ int kaj_fromfile(kaj_pgm_t pgm, FILE *f, FILE *errfile)
   return err;
 }
 
+int kaj_fromstring(kaj_pgm_t pgm, char *lines, FILE *errfile)
+{
+  char *line;
+  int err = ERR_NONE;
+  line = lines;
+  while (err == ERR_NONE && line && *line) {
+    err = kaj_addline(pgm,line,&line);
+    while (isspace((int)*line)) line++;
+  }
+  err = kaj_assemble(pgm);  // will just return if there is an error
+  kaj_perror(pgm,line,errfile);
+  return err;
+}

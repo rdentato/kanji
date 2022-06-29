@@ -1,3 +1,6 @@
+//  (C) by Remo Dentato (rdentato@gmail.com)
+//  License: https://opensource.org/licenses/MIT
+
 #include "kanji.h"
 
 int main(int argc, char *argv[])

@@ -1,3 +1,6 @@
+//  (C) by Remo Dentato (rdentato@gmail.com)
+//  License: https://opensource.org/licenses/MIT
+
 #ifndef KANJI_SYS_H
 #define KANJI_SYS_H
 #include <stdint.h>

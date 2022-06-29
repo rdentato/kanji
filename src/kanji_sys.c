@@ -1,3 +1,6 @@
+//  (C) by Remo Dentato (rdentato@gmail.com)
+//  License: https://opensource.org/licenses/MIT
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "kanji_sys.h"

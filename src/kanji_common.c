@@ -1,3 +1,6 @@
+//  (C) by Remo Dentato (rdentato@gmail.com)
+//  License: https://opensource.org/licenses/MIT
+
 #define SKP_MAIN
 #define TRY_MAIN
 #define VAL_MAIN
@@ -66,8 +69,8 @@ kaj_pgm_t kaj_new(int32_t pgm_init_size, int32_t lbl_init_size, uint16_t stk_siz
   pgm->pgm_cmpflg= 0;
   pgm->cur_ln    = 0;
 
-  pgm->vecs = NULL;
-  pgm->bufs = NULL;
+  pgm->vecs = valnil;
+  pgm->bufs = valnil;
 
   pgm->str       = NULL;
   pgm->str_size  = 0;
@@ -88,8 +91,10 @@ void *kaj_free(kaj_pgm_t pgm)
     if (pgm->lst.lbl) free (pgm->lst.lbl);
     if (pgm->pgm) free (pgm->pgm);
     if (pgm->str) free (pgm->str);
-    for (val_info_t p=pgm->vecs; p != NULL; p = p->nxt) valfree(VALVEC | ((uintptr_t)p));
-    for (val_info_t p=pgm->bufs; p != NULL; p = p->nxt) valfree(VALBUF | ((uintptr_t)p));
+    for (val_t p=pgm->vecs; p != valnil; ) { val_t v = p; p = valaux(p); valfree(v); }
+    for (val_t p=pgm->bufs; p != valnil; ) { val_t v = p; p = valaux(p); valfree(v); }
+    pgm->vecs = valnil;
+    pgm->bufs = valnil;
     free(pgm);
   }
   return NULL;

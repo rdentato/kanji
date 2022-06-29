@@ -1,4 +1,6 @@
-
+#  (C) by Remo Dentato (rdentato@gmail.com)
+#  License: https://opensource.org/licenses/MIT
+     
 TOP=..
 
 SKPGEN=../dist/bin/skp
@@ -65,4 +67,4 @@ syslib.c: kanji_sys syslib/*.c
 	rm -f syslib.tmp syslib.fnc
 
 clean:
-	$(RM) *.o kanji_sys kanji $(OP_HDRS) syslib*.??? libkaj.a
+	$(RM) *.o kanji_sys kanji $(OP_HDRS) sys*.* libkaj.a

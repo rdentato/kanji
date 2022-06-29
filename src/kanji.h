@@ -1,3 +1,6 @@
+//  (C) by Remo Dentato (rdentato@gmail.com)
+//  License: https://opensource.org/licenses/MIT
+
 #ifndef KANJI_H_
 #define KANJI_H_
 
@@ -9,6 +12,7 @@
 #include "skp.h"
 #include "try.h"
 #include "val.h"
+#include "vrg.h"
 
 #include "opcodes_tok.h"
 extern char *opcodes;
@@ -34,8 +38,8 @@ typedef struct kaj_pgm_s {
     uint64_t *lbl;
     val_t    *regs;
   } lst;
-  val_info_t vecs;
-  val_info_t bufs;
+  val_t     vecs;
+  val_t     bufs;
   char     *str; // constant strings
   int32_t   str_size;
   int32_t   str_count;
@@ -70,15 +74,21 @@ typedef struct kaj_pgm_s {
 #define ERR_NOTASSEMBLED_PGM 10
 #define ERR_DATASECTION      11
 
+#define REG_NONE           0xFF
+
 extern char *ERR_MSG[];
 
       void *kaj_free(kaj_pgm_t pgm);
        void kaj_dump(kaj_pgm_t pgm, FILE *f);
 kaj_pgm_t kaj_new(int32_t pgm_init_size, int32_t lbl_init_size, uint16_t stk_size);
 
-    int32_t kaj_addline(kaj_pgm_t pgm, char *line);
+    #define kaj_addline(...) vrg(kaj_add_line,__VA_ARGS__)
+    #define kaj_add_line2(p,l) kaj_add_line3(p, l, NULL)
+    int32_t kaj_add_line3(kaj_pgm_t pgm, char *line, char **lnend);
+
         int kaj_assemble(kaj_pgm_t pgm);
         int kaj_fromfile(kaj_pgm_t pgm, FILE *f, FILE *errfile);
+        int kaj_fromstring(kaj_pgm_t pgm, char *lines, FILE *errfile);
 
        void kaj_perror(kaj_pgm_t pgm,char *line, FILE *errfile);
 

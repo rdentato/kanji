@@ -1,3 +1,6 @@
+//  (C) by Remo Dentato (rdentato@gmail.com)
+//  License: https://opensource.org/licenses/MIT
+
 #include "kanji.h"
 #include "kanji_sys.h"
 
@@ -40,6 +43,7 @@ static kaj_sys_f kaj_checkfname(int64_t fname)
 
 int kaj_setreg(kaj_pgm_t pgm, uint8_t reg, val_t input)
 {
+  if (pgm->pgm_err != ERR_NONE) return pgm->pgm_err;
   if (reg > pgm->max_regs) return ERR_INVALID_REG;
   pgm->lst.regs[reg] = input;
   return ERR_NONE;
@@ -47,7 +51,7 @@ int kaj_setreg(kaj_pgm_t pgm, uint8_t reg, val_t input)
 
 val_t kaj_getreg(kaj_pgm_t pgm, uint8_t reg)
 {
-  if (reg > pgm->max_regs) return valnil;
+  if (pgm->pgm_err != ERR_NONE || reg > pgm->max_regs) return valnil;
   return pgm->lst.regs[reg];
 }
 
@@ -84,14 +88,14 @@ static int start_JSR(kaj_pgm_t pgm, uint8_t reg, val_t input)
 int kaj_init(kaj_pgm_t pgm, int32_t start, uint8_t reg, val_t input)
 {
   if (pgm->lst_type != LST_REGISTERS) return ERR_NOTASSEMBLED_PGM;
-  if (reg > pgm->max_regs) return ERR_INVALID_REG;
+  if (reg != 0xFF && reg > pgm->max_regs) return ERR_INVALID_REG;
  
   dbgtrc("sys: %d",(int)SYS_NUM);
   pgm->pgm_count = pgm->max_pgm+1;  // reset pgm stack
   pgm->lst_count = pgm->max_regs+1; // reset regs stack
   pgm->cur_ln = start;
  _dbgtrc("Input: %lX",input);
-  start_JSR(pgm,0,input);
+  start_JSR(pgm,reg,input);
 
   pgm->pgm[pgm->pgm_count-3] &= 0xFF;
   pgm->pgm[pgm->pgm_count-3] |= pgm->max_pgm << 8;
@@ -103,32 +107,27 @@ int kaj_init(kaj_pgm_t pgm, int32_t start, uint8_t reg, val_t input)
 
 static val_t newvec(kaj_pgm_t pgm, uint32_t sze)
 {
-  val_info_t p = pgm->vecs;
-  val_t v;
-  if (p == NULL) return valvec(sze);
-  pgm->vecs = p->nxt;
-  v = VALVEC | (((uintptr_t)p) & VAL_PTRMASK);
-  valresize(v, sze);
-  return v;
+  val_t p = pgm->vecs;
+  if (p == valnil) return valvec(sze);
+  pgm->vecs = valaux(p);
+  valresize(p, sze); 
+  return p;
 }
 
 static val_t newbuf(kaj_pgm_t pgm, uint32_t sze)
 {
-  val_info_t p = pgm->bufs;
-  val_t v;
-  if (p == NULL) return valvec(sze);
-  pgm->bufs = p->nxt;
-  v = VALBUF | (((uintptr_t)p) & VAL_PTRMASK);
-  valresize(v, sze);
-  return v;
+  val_t p = pgm->bufs;
+  if (p == valnil) return valbuf(sze);
+  pgm->bufs = valaux(p);
+  valresize(p, sze);
+  return p;
 }
 
 static void kll(kaj_pgm_t pgm, val_t v)
 { 
-   val_info_t p=valtoptr(v);
    switch(VALTYPE(v)) {
-     case VALVEC: p->nxt = pgm->vecs; pgm->vecs = p->nxt; break;
-     case VALBUF: p->nxt = pgm->bufs; pgm->bufs = p->nxt; break;
+     case VALVEC: 
+     case VALBUF: valaux(v,pgm->bufs); valaux(pgm->bufs,v); break;
    }
 }
 
@@ -143,7 +142,7 @@ static val_t const2str(char *str, val_t v)
 int kaj_step(kaj_pgm_t pgm) 
 {
   uint32_t op;
-  uint8_t reg;
+  uint8_t reg=0x00;
   int64_t fname;
   kaj_sys_f fptr;
   void *p;
@@ -456,7 +455,7 @@ int kaj_step(kaj_pgm_t pgm)
       break;
 
     case TOK_RET:
-     _dbgtrc("ret stack: -1 %08X\n                 -2 %08X\n                 -3 %08X",pgm->pgm[pgm->pgm_count-1],pgm->pgm[pgm->pgm_count-2],pgm->pgm[pgm->pgm_count-3]);
+     dbgtrc("ret stack: -1 %08X\n                 -2 %08X\n                 -3 %08X",pgm->pgm[pgm->pgm_count-1],pgm->pgm[pgm->pgm_count-2],pgm->pgm[pgm->pgm_count-3]);
       if (pgm->pgm_count > pgm->max_pgm+1) {
         reg = pgm->pgm[pgm->pgm_count-3] & 0xFF;
         if (reg != 0xFF) {
@@ -465,7 +464,7 @@ int kaj_step(kaj_pgm_t pgm)
         pgm->cur_ln = pgm->pgm[pgm->pgm_count-3] >> 8;
         pgm->pgm_count -= 3;
       }
-     _dbgtrc("RET reg: %d %lX",reg,pgm->lst.regs[reg]);
+     dbgtrc("RET reg: %d %lX",reg,pgm->lst.regs[reg]);
       break;
 
     case TOK_RTV:
