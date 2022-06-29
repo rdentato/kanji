@@ -90,7 +90,7 @@ int kaj_init(kaj_pgm_t pgm, int32_t start, uint8_t reg, val_t input)
   if (pgm->lst_type != LST_REGISTERS) return ERR_NOTASSEMBLED_PGM;
   if (reg != 0xFF && reg > pgm->max_regs) return ERR_INVALID_REG;
  
-  dbgtrc("sys: %d",(int)SYS_NUM);
+ _dbgtrc("sys: %d",(int)SYS_NUM);
   pgm->pgm_count = pgm->max_pgm+1;  // reset pgm stack
   pgm->lst_count = pgm->max_regs+1; // reset regs stack
   pgm->cur_ln = start;
@@ -286,7 +286,7 @@ int kaj_step(kaj_pgm_t pgm)
     case TOK_INC:
       v = pgm->lst.regs[(op >> 8) & 0xFF];
       n = op >> 16;
-      dbgtrc("inc: %d",n);
+     _dbgtrc("inc: %d",n);
       if (valisdbl(v)) {
         pgm->lst.regs[(op >> 8) & 0xFF] = val(valtodbl(v) + (double)n);
         break;
@@ -429,16 +429,16 @@ int kaj_step(kaj_pgm_t pgm)
       n = (int32_t)(pgm->pgm[pgm->cur_ln++]);
        
       reg = n & 0xFF;
-      dbgtrc("arr: %08X",n);
+     _dbgtrc("arr: %08X",n);
       if ((n & 0xFF00) != 0xFF00)
         v = pgm->lst.regs[(n >> 8) & 0xFF];
       else v = valnil;
 
-      dbgtrc("%d %d %lX",pgm->cur_ln,reg,v);
+     _dbgtrc("%d %d %lX",pgm->cur_ln,reg,v);
         
       start_JSR(pgm, reg, v);
  
-      dbgtrc("pgm stack: -1 %08X\n                 -2 %08X\n                 -3 %08X",pgm->pgm[pgm->pgm_count-1],pgm->pgm[pgm->pgm_count-2],pgm->pgm[pgm->pgm_count-3]);
+     _dbgtrc("pgm stack: -1 %08X\n                 -2 %08X\n                 -3 %08X",pgm->pgm[pgm->pgm_count-1],pgm->pgm[pgm->pgm_count-2],pgm->pgm[pgm->pgm_count-3]);
       pgm->cur_ln = op>>8;
       
       break;
@@ -455,7 +455,7 @@ int kaj_step(kaj_pgm_t pgm)
       break;
 
     case TOK_RET:
-     dbgtrc("ret stack: -1 %08X\n                 -2 %08X\n                 -3 %08X",pgm->pgm[pgm->pgm_count-1],pgm->pgm[pgm->pgm_count-2],pgm->pgm[pgm->pgm_count-3]);
+    _dbgtrc("ret stack: -1 %08X\n                 -2 %08X\n                 -3 %08X",pgm->pgm[pgm->pgm_count-1],pgm->pgm[pgm->pgm_count-2],pgm->pgm[pgm->pgm_count-3]);
       if (pgm->pgm_count > pgm->max_pgm+1) {
         reg = pgm->pgm[pgm->pgm_count-3] & 0xFF;
         if (reg != 0xFF) {
@@ -464,7 +464,7 @@ int kaj_step(kaj_pgm_t pgm)
         pgm->cur_ln = pgm->pgm[pgm->pgm_count-3] >> 8;
         pgm->pgm_count -= 3;
       }
-     dbgtrc("RET reg: %d %lX",reg,pgm->lst.regs[reg]);
+    _dbgtrc("RET reg: %d %lX",reg,pgm->lst.regs[reg]);
       break;
 
     case TOK_RTV:
@@ -585,7 +585,7 @@ int kaj_step(kaj_pgm_t pgm)
     case TOK_LEN:
       reg = (op >> 8) & 0xFF; 
       n = valcount(pgm->lst.regs[(op >> 16) & 0xFF]);
-      dbgtrc("LEN: %d",n);
+     _dbgtrc("LEN: %d",n);
       pgm->lst.regs[reg] = val(n);
       break;
 

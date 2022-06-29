@@ -18,7 +18,7 @@ A value can be:
 ## OPCODES
 
 > ** 00 00 00 ..  HLT
-> ** 00 00 00 ..  RET
+> ** 00 00 00 .. *RET
 > ** 00 00 00 ..  NOP
 > ** 00 YY XX ..  SYS m.f R[X] R[Y]   ; Call the function m.f with R[X] as return and R[Y] as argument
 > ** 00 YY XX .. *STO R[X] R[Y]       ; R[X] <- R[Y]
@@ -86,13 +86,13 @@ A value can be:
 > ** nn nn nn ..  JLT n
 > ** nn nn nn ..  JLE n
 > ** nn nn nn ..  JMP n
-> ** 00 00 XX ..  ARG R[X]
-> ** 00 00 XX ..  RTV R[X]
-> -* nn nn 00 ..  RT2 n
-> -* 00 00 00 ..  RT4 n
-> -* 00 00 00 ..  RT8 n
-> -* 00 YY XX ..  RTI R[X] @ZZ[YY]    ; ZZ in next 4 bytes
-> -* NN NN XX ..  RTN R[X] @ZZ[NN]    ; ZZ in next 4 bytes
+> ** 00 00 XX .. *ARG R[X]
+> ** 00 00 XX .. *RTV R[X]
+> -* nn nn 00 .. *RT2 n
+> -* 00 00 00 .. *RT4 n
+> -* 00 00 00 .. *RT8 n
+> -* 00 YY XX .. *RTI R[X] @ZZ[YY]    ; ZZ in next 4 bytes
+> -* NN NN XX .. *RTN R[X] @ZZ[NN]    ; ZZ in next 4 bytes
 > ** nn nn nn ..  JSR n R[X] R[Y]     ; X (returned value) and Y (argument) in next 4 bytes
 > -* 00 00 XX ..  ZEQ R[X]
 > -* 00 00 XX ..  ZNE R[X]

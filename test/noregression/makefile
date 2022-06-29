@@ -1,5 +1,5 @@
-#  (C) by Remo Dentato (rdentato@gmail.com)
-#  License: https://opensource.org/licenses/MIT
+# © 2022 Remo Dentato (rdentato@gmail.com)
+# ⚖ MIT (https://opensource.org/licenses/MIT)
 
 TOP = ../..
 TESTS = $(subst t_,ut_,$(basename $(wildcard t_*.c) .c))
@@ -10,13 +10,12 @@ DBGFLAGS = -DDEBUG=DBG_TEST
 
 LIBS = -L $(TOP)/src -lkaj -lm 
 
-.PRECIOUS: %.o
+.PRECIOUS: %.o 
 
 ls:
-	@echo "Targets: all run runall clean $(TESTS)"
+	@echo "Targets: all run runall clean $(TESTS)$(subst ut_,x_,$(TESTS))"
 
-all: 
-	@cd ../../src ; make
+all: libkaj
 	@for f in $(TESTS) ; do \
      make $$f ;\
    done
@@ -30,6 +29,9 @@ run:
 
 runall: all run
 
+libkaj:
+	@cd $(TOP)/src ; make
+
 %.o: %.c
 	$(CC) $(CFLAGS) $(DBGFLGS) -c $*.c
 
@@ -39,6 +41,20 @@ u%: %.o
 clean:
 	$(RM) *.o ut_* *.log
 
+
+# To test a single suite, for example STO, invoke:
+#    make x_STO
+# This will compile and execute the tests.
+
+x_% : ut_%
+	./ut_$* 2>&1
+
+# The stderr file is redirected to stdout to ease further
+# processing (for example with grep or sed)
+
+
+# This is needed to avoid the removing of intermediate files
+xALL: $(TESTS)  
 
 
 ## #OPT+=-fdata-sections -ffunction-sections

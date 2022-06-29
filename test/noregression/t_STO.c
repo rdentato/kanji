@@ -191,5 +191,5 @@ int main(int argc, char *argv[])
     kaj_free(pgm);
   }
 
-  return err;
+  return 0;
 }
