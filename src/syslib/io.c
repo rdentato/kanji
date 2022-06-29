@@ -36,7 +36,7 @@ val_t io.print(val_t args)
   int k = 0;
   if (valisvec(args) && valcount(args)>1) {
     arg = valget(args,val(k));
-    if (valisptr(arg)) {
+    if (valisptr(arg)) {  // This is a file pointer
       f = valtoptr(arg);
       k++;
       arg = valget(args,val(k));
@@ -44,7 +44,7 @@ val_t io.print(val_t args)
     do {
       prt(f,arg); k++;
       arg = valget(args,val(k));
-    } while (k<valcount(args));
+    } while (k < valcount(args));
   }
   else prt(f,arg);
   
