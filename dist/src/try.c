@@ -5,7 +5,7 @@
 **  https://opensource.org/licenses/MIT
 */
 
-#ifndef SKP_MAIN
-#define SKP_MAIN
+#ifndef TRY_MAIN
+#define TRY_MAIN
 #endif
-#include "skp.h"
+#include "try.h"

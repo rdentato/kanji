@@ -17,95 +17,95 @@ A value can be:
   
 ## OPCODES
 
-> ** 00 00 00 .. HLT
-> ** 00 00 00 .. RET
-> ** 00 00 00 .. NOP
-> ** 00 YY XX .. SYS m.f R[X] R[Y]   ; Call the function m.f with R[X] as return and R[Y] as argument
-> ** 00 YY XX .. STO R[X] R[Y]       ; R[X] <- R[Y]
-> -* VV VV XX .. ST2 R[X] V          ; R[X] <- v 16 bit integer
-> -* 00 00 XX .. ST4 R[X] V          ; R[X] <- v 32 bit integer (in next 4 bytes)
-> -* 00 00 XX .. ST8 R[X] V          ; R[X] <- v in next 8 bytes (val)
-> -* 00 YY XX .. STI R[X] @ZZ[YY]    ; ZZ in next 4 bytes
-> -* NN NN XX .. STN R[X] @ZZ[NN]    ; ZZ in next 4 bytes
-> ** 00 YY XX .. STR R[X] R[Y]       ; Store in R[X] the (ptr to the) global string at offset R[Y]
-> -* 00 00 XX .. S7R R[X] n          ; Same as STR but n in next 4 bytes 
-> ** 00 YY XX .. CMP R[X] R[Y]       ; 
-> -* nn nn XX .. CP2 R[X] n          ; 
-> -* 00 00 XX .. CP4 R[X] n          ; 
-> -* 00 00 XX .. CP8 R[X] n          ; 
-> -* 00 YY XX .. CPI R[X] @ZZ[YY]    ; ZZ in next 4 bytes
-> -* NN NN XX .. CPN R[X] @ZZ[NN]    ; ZZ in next 4 bytes
-> ** ZZ YY XX .. ADD R[X] R[Y] R[Z]  ; R[X] <- R[Y] op R[Z]
-> ** ZZ YY XX .. SUB R[X] R[Y] R[Z]  ; R[X] <- R[Y] op R[Z]
-> ** ZZ YY XX .. MUL R[X] R[Y] R[Z]  ; R[X] <- R[Y] op R[Z]
-> ** ZZ YY XX .. DIV R[X] R[Y] R[Z]  ; R[X] <- R[Y] op R[Z]
-> ** ZZ YY XX .. MOD R[X] R[Y] R[Z]  ; R[X] <- R[Y] op R[Z]
-> ** ZZ YY XX .. AND R[X] R[Y] R[Z]  ; R[X] <- R[Y] op R[Z]
-> ** ZZ YY XX .. ORR R[X] R[Y] R[Z]  ; R[X] <- R[Y] op R[Z]
-> ** ZZ YY XX .. XOR R[X] R[Y] R[Z]  ; R[X] <- R[Y] op R[Z]
-> ** ZZ YY XX .. SHL R[X] R[Y] R[Z]  ; R[X] <- R[Y] << R[Z]
-> -* nn YY XX .. SL1 R[X] R[Y] n     ; R[X] <- R[Y] << n
-> ** ZZ YY XX .. SHR R[X] R[Y] R[Z]  ; R[X] <- R[Y] >> R[Z] (unsigned)
-> -* nn YY XX .. SR1 R[X] R[Y] n     ; R[X] <- R[Y] >> n (unsigned)
-> ** ZZ YY XX .. ASR R[X] R[Y] R[Z]  ; R[X] <- R[Y] >> R[Z] (signed)
-> -* nn YY XX .. AR1 R[X] R[Y] n     ; R[X] <- R[Y] >> n (signed)
-> ** 00 YY XX .. INT R[X] R[Y]
-> ** 00 YY XX .. FLT R[X] R[Y]
-> ** 00 YY XX .. NOT R[X] R[Y]       ; binary NOT
-> ** 00 YY XX .. NEG R[X] R[Y]       ; Multiply by -1
-> ** vv vv XX .. INC R[X] v          ; increment by v
-> ** vv vv XX .. DEC R[X] v          ; decrement by v
-> ** nn nn XX .. VEC R[X] n          ; create a vec with n slots (n unsigned 16 bit)
->    nn nn XX .. MAP R[X] n          ; create a map with n slots (n unsigned 16 bit)
-> ** nn nn XX .. BUF R[X] n          ; create a buffer with n bytes (n unsigned 16 bit)
-> ** 00 00 XX .. CLR R[X]            ; empty R[X]
-> ** 00 00 XX .. KLL R[X]            ; destroy object in R[X]
-> ** ZZ YY XX .. SET R[X] R[Y] R[Z]  ; R[X][R[Y]] <- R[Z]
-> ** ZZ YY XX .. GET R[X] R[Y] R[Z]  ; R[X] <- R[Y][R[Z]]
-> ** 00 YY XX .. LEN R[X] R[Y]       ; count of vector elements (for STR includes the '\0')
-> ** 00 YY XX .. SZE R[X] R[Y]       ; size of vector (max available space)
-> ** 00 YY XX .. PSH R[X] R[Y]       ; R[X] is a stack (push R[Y])
-> -* nn nn 00 .. PS2 n
-> -* 00 00 00 .. PS4 n
-> -* 00 00 00 .. PS8 n
-> -* 00 YY XX .. PSI R[X] @ZZ[YY]    ; ZZ in next 4 bytes
-> -* NN NN XX .. PSN R[X] @ZZ[NN]    ; ZZ in next 4 bytes
-> ** ZZ YY XX .. TOP R[X] R[Y] R[Z]  ; R[Y] is a stack (R[X] <- nth element from top)
-> -* nn YY XX .. T0P R[X] R[Y] n     ; R[Y] is a stack (R[X] <- nth element from top)
-> ** nn nn XX .. DRP R[X] n          ; Remove last elements in vec or top of stack
-> ** 00 YY XX .. ENQ R[X] R[Y]
-> ** ZZ YY XX .. NXQ R[X] R[Y] R[Z]  ; R[Y] ia a queue ((R[X] <- nth element from first)
-> -* nn YY XX .. N0Q R[X] R[Y] n     ; R[Y] ia a queue ((R[X] <- nth element from first)
-> ** nn nn XX .. DEQ R[X] n          ; Remove first n elements in the queue
->    00 YY XX .. POS R[X] R[Y]       ; Set cur element of R[X] to R[Y]
->    ZZ YY XX .. CPY R[X] R[Y] R[Z]  ; Copy R[Z] element from buf/vec/str in R[Y] to buf/vec/str in R[XX] (must be same type)
-> ** nn nn nn .. JEQ n
-> ** nn nn nn .. JNE n
-> ** nn nn nn .. JGT n
-> ** nn nn nn .. JGE n
-> ** nn nn nn .. JLT n
-> ** nn nn nn .. JLE n
-> ** nn nn nn .. JMP n
-> ** 00 00 XX .. ARG R[X]
-> ** 00 00 XX .. RTV R[X]
-> -* nn nn 00 .. RT2 n
-> -* 00 00 00 .. RT4 n
-> -* 00 00 00 .. RT8 n
-> -* 00 YY XX .. RTI R[X] @ZZ[YY]    ; ZZ in next 4 bytes
-> -* NN NN XX .. RTN R[X] @ZZ[NN]    ; ZZ in next 4 bytes
-> ** nn nn nn .. JSR n R[X] R[Y]     ; X (returned value) and Y (argument) in next 4 bytes
-> -* 00 00 XX .. ZEQ R[X]
-> -* 00 00 XX .. ZNE R[X]
-> -* 00 00 XX .. ZGT R[X]
-> -* 00 00 XX .. ZGE R[X]
-> -* 00 00 XX .. ZLT R[X]
-> -* 00 00 XX .. ZLE R[X]
-> -* 00 00 XX .. ZMP R[X]
-> -  00 00 XX .. ZSR R[X]
-> ** ZZ YY XX .. SAV R[X] R[Y] R[Z] ; Save R[X] R[Y] R[Z] (in that order). 
-> ** ZZ YY XX .. RCL R[X] R[Y] R[Z] ; Recall R[X] R[Y] R[Z] (in that order). 
-> ** 00 00 00 .. DTA                ; End of code section/start of data section
-> *- .. .. .. .. VAL n              ; Place a val into next slots
+> ** 00 00 00 ..  HLT
+> ** 00 00 00 ..  RET
+> ** 00 00 00 ..  NOP
+> ** 00 YY XX ..  SYS m.f R[X] R[Y]   ; Call the function m.f with R[X] as return and R[Y] as argument
+> ** 00 YY XX .. *STO R[X] R[Y]       ; R[X] <- R[Y]
+> -* VV VV XX .. *ST2 R[X] V          ; R[X] <- v 16 bit integer
+> -* 00 00 XX .. *ST4 R[X] V          ; R[X] <- v 32 bit integer (in next 4 bytes)
+> -* 00 00 XX .. *ST8 R[X] V          ; R[X] <- v in next 8 bytes (val)
+> -* 00 YY XX .. *STI R[X] @ZZ[YY]    ; ZZ in next 4 bytes
+> -* NN NN XX .. *STN R[X] @ZZ[NN]    ; ZZ in next 4 bytes
+> ** 00 YY XX .. *STR R[X] R[Y]       ; Store in R[X] the (ptr to the) global string at offset R[Y]
+> -* 00 00 XX .. *S7R R[X] n          ; Same as STR but n in next 4 bytes 
+> ** 00 YY XX ..  CMP R[X] R[Y]       ; 
+> -* nn nn XX ..  CP2 R[X] n          ; 
+> -* 00 00 XX ..  CP4 R[X] n          ; 
+> -* 00 00 XX ..  CP8 R[X] n          ; 
+> -* 00 YY XX ..  CPI R[X] @ZZ[YY]    ; ZZ in next 4 bytes
+> -* NN NN XX ..  CPN R[X] @ZZ[NN]    ; ZZ in next 4 bytes
+> ** ZZ YY XX ..  ADD R[X] R[Y] R[Z]  ; R[X] <- R[Y] op R[Z]
+> ** ZZ YY XX ..  SUB R[X] R[Y] R[Z]  ; R[X] <- R[Y] op R[Z]
+> ** ZZ YY XX ..  MUL R[X] R[Y] R[Z]  ; R[X] <- R[Y] op R[Z]
+> ** ZZ YY XX ..  DIV R[X] R[Y] R[Z]  ; R[X] <- R[Y] op R[Z]
+> ** ZZ YY XX ..  MOD R[X] R[Y] R[Z]  ; R[X] <- R[Y] op R[Z]
+> ** ZZ YY XX ..  AND R[X] R[Y] R[Z]  ; R[X] <- R[Y] op R[Z]
+> ** ZZ YY XX ..  ORR R[X] R[Y] R[Z]  ; R[X] <- R[Y] op R[Z]
+> ** ZZ YY XX ..  XOR R[X] R[Y] R[Z]  ; R[X] <- R[Y] op R[Z]
+> ** ZZ YY XX ..  SHL R[X] R[Y] R[Z]  ; R[X] <- R[Y] << R[Z]
+> -* nn YY XX ..  SL1 R[X] R[Y] n     ; R[X] <- R[Y] << n
+> ** ZZ YY XX ..  SHR R[X] R[Y] R[Z]  ; R[X] <- R[Y] >> R[Z] (unsigned)
+> -* nn YY XX ..  SR1 R[X] R[Y] n     ; R[X] <- R[Y] >> n (unsigned)
+> ** ZZ YY XX ..  ASR R[X] R[Y] R[Z]  ; R[X] <- R[Y] >> R[Z] (signed)
+> -* nn YY XX ..  AR1 R[X] R[Y] n     ; R[X] <- R[Y] >> n (signed)
+> ** 00 YY XX ..  INT R[X] R[Y]
+> ** 00 YY XX ..  FLT R[X] R[Y]
+> ** 00 YY XX ..  NOT R[X] R[Y]       ; binary NOT
+> ** 00 YY XX ..  NEG R[X] R[Y]       ; Multiply by -1
+> ** vv vv XX ..  INC R[X] v          ; increment by v
+> ** vv vv XX ..  DEC R[X] v          ; decrement by v
+> ** nn nn XX ..  VEC R[X] n          ; create a vec with n slots (n unsigned 16 bit)
+>    nn nn XX ..  MAP R[X] n          ; create a map with n slots (n unsigned 16 bit)
+> ** nn nn XX ..  BUF R[X] n          ; create a buffer with n bytes (n unsigned 16 bit)
+> ** 00 00 XX ..  CLR R[X]            ; empty R[X]
+> ** 00 00 XX ..  KLL R[X]            ; destroy object in R[X]
+> ** ZZ YY XX ..  SET R[X] R[Y] R[Z]  ; R[X][R[Y]] <- R[Z]
+> ** ZZ YY XX ..  GET R[X] R[Y] R[Z]  ; R[X] <- R[Y][R[Z]]
+> ** 00 YY XX ..  LEN R[X] R[Y]       ; count of vector elements (for STR includes the '\0')
+> ** 00 YY XX ..  SZE R[X] R[Y]       ; size of vector (max available space)
+> ** 00 YY XX ..  PSH R[X] R[Y]       ; R[X] is a stack (push R[Y])
+> -* nn nn 00 ..  PS2 n
+> -* 00 00 00 ..  PS4 n
+> -* 00 00 00 ..  PS8 n
+> -* 00 YY XX ..  PSI R[X] @ZZ[YY]    ; ZZ in next 4 bytes
+> -* NN NN XX ..  PSN R[X] @ZZ[NN]    ; ZZ in next 4 bytes
+> ** ZZ YY XX ..  TOP R[X] R[Y] R[Z]  ; R[Y] is a stack (R[X] <- nth element from top)
+> -* nn YY XX ..  T0P R[X] R[Y] n     ; R[Y] is a stack (R[X] <- nth element from top)
+> ** nn nn XX ..  DRP R[X] n          ; Remove last elements in vec or top of stack
+> ** 00 YY XX ..  ENQ R[X] R[Y]
+> ** ZZ YY XX ..  NXQ R[X] R[Y] R[Z]  ; R[Y] ia a queue ((R[X] <- nth element from first)
+> -* nn YY XX ..  N0Q R[X] R[Y] n     ; R[Y] ia a queue ((R[X] <- nth element from first)
+> ** nn nn XX ..  DEQ R[X] n          ; Remove first n elements in the queue
+>    00 YY XX ..  POS R[X] R[Y]       ; Set cur element of R[X] to R[Y]
+>    ZZ YY XX ..  CPY R[X] R[Y] R[Z]  ; Copy R[Z] element from buf/vec/str in R[Y] to buf/vec/str in R[XX] (must be same type)
+> ** nn nn nn ..  JEQ n
+> ** nn nn nn ..  JNE n
+> ** nn nn nn ..  JGT n
+> ** nn nn nn ..  JGE n
+> ** nn nn nn ..  JLT n
+> ** nn nn nn ..  JLE n
+> ** nn nn nn ..  JMP n
+> ** 00 00 XX ..  ARG R[X]
+> ** 00 00 XX ..  RTV R[X]
+> -* nn nn 00 ..  RT2 n
+> -* 00 00 00 ..  RT4 n
+> -* 00 00 00 ..  RT8 n
+> -* 00 YY XX ..  RTI R[X] @ZZ[YY]    ; ZZ in next 4 bytes
+> -* NN NN XX ..  RTN R[X] @ZZ[NN]    ; ZZ in next 4 bytes
+> ** nn nn nn ..  JSR n R[X] R[Y]     ; X (returned value) and Y (argument) in next 4 bytes
+> -* 00 00 XX ..  ZEQ R[X]
+> -* 00 00 XX ..  ZNE R[X]
+> -* 00 00 XX ..  ZGT R[X]
+> -* 00 00 XX ..  ZGE R[X]
+> -* 00 00 XX ..  ZLT R[X]
+> -* 00 00 XX ..  ZLE R[X]
+> -* 00 00 XX .. *ZMP R[X]
+> -  00 00 XX ..  ZSR R[X]
+> ** ZZ YY XX ..  SAV R[X] R[Y] R[Z] ; Save R[X] R[Y] R[Z] (in that order). 
+> ** ZZ YY XX ..  RCL R[X] R[Y] R[Z] ; Recall R[X] R[Y] R[Z] (in that order). 
+> ** 00 00 00 .. *DTA                ; End of code section/start of data section
+> *- .. .. .. .. *VAL n              ; Place a val into next slots
 
 
 SYS encoding:

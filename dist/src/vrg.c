@@ -5,7 +5,7 @@
 **  https://opensource.org/licenses/MIT
 */
 
-#ifndef SKP_MAIN
-#define SKP_MAIN
+#ifndef VRG_MAIN
+#define VRG_MAIN
 #endif
-#include "skp.h"
+#include "vrg.h"
