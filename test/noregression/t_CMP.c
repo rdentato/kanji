@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
 
     err = kaj_fromstring( pgm,
                   "    STO %1 1 \n"
-                  "    STO %0 3 \n"
+                  "    STO %0 3 \n"    // Integer 3 and double 3.0 are the same number
                   "    STO %2 3.0 \n"
                   "    CMP %0 %2 \n" 
                   "    JNE @1 \n"

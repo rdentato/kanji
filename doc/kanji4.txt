@@ -53,6 +53,8 @@ A value can be:
 > ** 00 YY XX ..  FLT R[X] R[Y]
 > ** 00 YY XX ..  NOT R[X] R[Y]       ; binary NOT
 > ** 00 YY XX ..  NEG R[X] R[Y]       ; Multiply by -1
+> ** 00 YY XX ..  XPR R[X] R[Y]       ; evaluate the RPN expression (a Register)
+> -  00 00 XX ..  XPE R[X] expr       ; evaluate the RPN expression (a string)
 > ** vv vv XX ..  INC R[X] v          ; increment by v
 > ** vv vv XX ..  DEC R[X] v          ; decrement by v
 > ** nn nn XX ..  VEC R[X] n          ; create a vec with n slots (n unsigned 16 bit)

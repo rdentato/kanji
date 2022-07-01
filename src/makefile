@@ -1,6 +1,6 @@
-#  (C) by Remo Dentato (rdentato@gmail.com)
-#  License: https://opensource.org/licenses/MIT
-     
+# © 2022 Remo Dentato (rdentato@gmail.com)
+# ⚖ MIT (https://opensource.org/licenses/MIT)
+   
 TOP=..
 
 SKPGEN=../dist/bin/skp
@@ -21,7 +21,7 @@ LNFLAGS+=-s -Wl,--gc-sections
 
 CFLAGS = $(PROFFLAGS) $(OPT) -Wall -I$(TOP)/src -I$(TOP)/dist/src
 
-OBJS = syslib.o kanji_sys.o kanji_common.o kanji_exe.o 
+OBJS = syslib.o kanji_sys.o kanji_common.o kanji_exe.o kanji_expr.o
 OP_HDRS=opcodes_str.h opcodes_tok.h
 
 all:  kanji

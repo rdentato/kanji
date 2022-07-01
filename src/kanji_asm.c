@@ -539,6 +539,36 @@ static char *arg_STR(kaj_pgm_t pgm, uint32_t op, char *start)
   return t;
 }
 
+static char *arg_XPR(kaj_pgm_t pgm, uint32_t op, char *start)
+{
+  char *s = start;
+  char *t = s;
+  uint32_t reg;
+
+  if (skp(s, "'%'x?x W", &t)) {
+    reg = add_reg(pgm,s);
+    op |= reg << 8;
+    s = t;
+  }
+  else throw(ERR_INVALID_ARG);
+
+  if (skp(s, "'%'x?x W", &t)) {
+    reg = add_reg(pgm,s);
+    op |= reg << 16;
+    add_long(pgm,op);
+    return t;
+  }
+
+  if (*s == '"' && skp(s,"Q",&t)) {
+    op = (op & 0xFF00) | TOK_XPE; 
+    add_long(pgm,op);
+    add_str(pgm, s, (int32_t)(t-s)-2);
+    skp(t,"W",&t);
+  }
+  else throw(ERR_INVALID_ARG);
+
+  return t;
+}
 
 static char *arg_SHIFT(kaj_pgm_t pgm, uint32_t op, char *start, uint32_t op_alt)
 {
@@ -774,6 +804,10 @@ int32_t kaj_add_line3(kaj_pgm_t pgm, char *line, char **lnend)
         case TOK_SET :
         case TOK_GET :
           t = arg_3_regs(pgm,op,t);
+          break;
+
+        case TOK_XPR :
+          t = arg_XPR(pgm,op,t);
           break;
 
         case TOK_SAV :

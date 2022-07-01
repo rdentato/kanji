@@ -101,4 +101,6 @@ kaj_pgm_t kaj_new(int32_t pgm_init_size, int32_t lbl_init_size, uint16_t stk_siz
       val_t kaj_getreg(kaj_pgm_t pgm, uint8_t reg);
         int kaj_setreg(kaj_pgm_t pgm, uint8_t reg, val_t input);
 
+      val_t xpr_eval(kaj_pgm_t pgm,char *xpr);
+
 #endif

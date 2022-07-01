@@ -1,5 +1,5 @@
-//  (C) by Remo Dentato (rdentato@gmail.com)
-//  License: https://opensource.org/licenses/MIT
+// © 2022 Remo Dentato (rdentato@gmail.com)
+// ⚖ MIT (https://opensource.org/licenses/MIT)
 
 #include "kanji.h"
 #include "kanji_sys.h"
@@ -139,6 +139,8 @@ static val_t const2str(char *str, val_t v)
 
   return v;
 }
+
+
 int kaj_step(kaj_pgm_t pgm) 
 {
   uint32_t op;
@@ -269,6 +271,19 @@ int kaj_step(kaj_pgm_t pgm)
 
     case TOK_NEG:
       pgm->lst.regs[(op >> 8) & 0xFF] = valneg(pgm->lst.regs[(op >> 16) & 0xFF]);
+      break;
+
+    case TOK_XPR:
+      v = pgm->lst.regs[(op >> 16) & 0xFF];
+      v = const2str(pgm->str,v);
+      pgm->lst.regs[(op >> 8) & 0xFF] = xpr_eval(pgm,valtostr(v));
+      break;
+
+    case TOK_XPE:
+      memcpy(&v, &(pgm->pgm[pgm->cur_ln]), 8);
+      v = const2str(pgm->str,v);
+      pgm->lst.regs[(op >> 8) & 0xFF] = xpr_eval(pgm,valtostr(v));
+      pgm->cur_ln+=2;
       break;
 
     case TOK_FLT:

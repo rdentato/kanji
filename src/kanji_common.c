@@ -15,6 +15,7 @@ int kaj_opcode_len(uint32_t op)
     case TOK_SYS: 
     case TOK_RT8: 
     case TOK_CP8: 
+    case TOK_XPE:
     case TOK_ST8: len++;
     
     case TOK_RTN:
@@ -105,8 +106,8 @@ void kaj_dump(kaj_pgm_t pgm, FILE *f)
   uint8_t *bytes;
   for (int32_t k=0; k<pgm->pgm_count; k++) {
     bytes = (uint8_t *)(pgm->pgm + k);
-    //printf("%06X  %02X %02X %02X %02X\n", k, bytes[3], bytes[2], bytes[1], bytes[0]);
-    fprintf(stderr,"%06X  %02X %02X %02X %02X\n", k, bytes[0], bytes[1], bytes[2], bytes[3]);
+    fprintf(stderr,"%06X  %02X %02X %02X %02X\n", k, bytes[3], bytes[2], bytes[1], bytes[0]);
+    //fprintf(stderr,"%06X  %02X %02X %02X %02X\n", k, bytes[0], bytes[1], bytes[2], bytes[3]);
   }
   for (int32_t k=0; k<pgm->str_count; k++) {
     if (k % 8 == 0) fprintf(stderr,"\n%06X ",k);
