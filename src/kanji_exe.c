@@ -74,7 +74,6 @@ static int start_JSR(kaj_pgm_t pgm, uint8_t reg, val_t input)
   int err=ERR_NONE;
   uint32_t k;
   void *p;
-  err = kaj_setreg(pgm, 0, input);
 
   k = (pgm->cur_ln) << 8 | reg;
   push_pgm(pgm,k);
@@ -88,7 +87,7 @@ static int start_JSR(kaj_pgm_t pgm, uint8_t reg, val_t input)
 int kaj_init(kaj_pgm_t pgm, int32_t start, uint8_t reg, val_t input)
 {
   if (pgm->lst_type != LST_REGISTERS) return ERR_NOTASSEMBLED_PGM;
-  if (reg != 0xFF && reg > pgm->max_regs) return ERR_INVALID_REG;
+  if (reg != REG_NONE && reg > pgm->max_regs) return ERR_INVALID_REG;
  
  _dbgtrc("sys: %d",(int)SYS_NUM);
   pgm->pgm_count = pgm->max_pgm+1;  // reset pgm stack
@@ -125,10 +124,12 @@ static val_t newbuf(kaj_pgm_t pgm, uint32_t sze)
 
 static void kll(kaj_pgm_t pgm, val_t v)
 { 
+  _dbgtrc("KLLN %lX",v);
    switch(VALTYPE(v)) {
-     case VALVEC: 
-     case VALBUF: valaux(v,pgm->bufs); valaux(pgm->bufs,v); break;
+     case VALVEC: valaux(v,pgm->vecs); pgm->vecs = v; break;
+     case VALBUF: valaux(v,pgm->bufs); pgm->bufs = v; break;
    }
+  _dbgtrc("KLLD");
 }
 
 static val_t const2str(char *str, val_t v)
@@ -449,7 +450,7 @@ int kaj_step(kaj_pgm_t pgm)
         v = pgm->lst.regs[(n >> 8) & 0xFF];
       else v = valnil;
 
-     _dbgtrc("%d %d %lX",pgm->cur_ln,reg,v);
+    _dbgtrc("JSR: %d %d %lX",pgm->cur_ln,reg,v);
         
       start_JSR(pgm, reg, v);
  
@@ -458,15 +459,20 @@ int kaj_step(kaj_pgm_t pgm)
       
       break;
 
-    case TOK_ZSR: {
-//        int32_t dest;
-//       _dbgtrc("BSR: op: %08X arg: %d %lX", op, pgm->arg_reg, pgm->lst.regs[pgm->arg_reg]);
-//        start_JSR(pgm, pgm->arg_reg, pgm->lst.regs[pgm->arg_reg]);
-//       _dbgtrc("pgm stack: -1 %08X\n                 -2 %08X\n                 -3 %08X",pgm->pgm[pgm->pgm_count-1],pgm->pgm[pgm->pgm_count-2],pgm->pgm[pgm->pgm_count-3]);
-//        dest = pgm->lst.regs[(op>>8) & 0XFF];
-//        if (dest > pgm->max_pgm) dest = pgm->max_pgm;
-//        pgm->cur_ln = dest ;
-      }
+    case TOK_ZSR: 
+      // YY XX ZZ ..  ZSR R[Z] R[X] R[Y]
+      
+      reg = (op >> 16) & 0xFF;
+     
+      v = valnil;
+      if ((op & 0xFF000000) != 0xFF000000)
+        v = pgm->lst.regs[(op >> 24) & 0xFF];
+        
+      start_JSR(pgm, reg, v);
+ 
+     _dbgtrc("pgm stack: -1 %08X\n                 -2 %08X\n                 -3 %08X",pgm->pgm[pgm->pgm_count-1],pgm->pgm[pgm->pgm_count-2],pgm->pgm[pgm->pgm_count-3]);
+      pgm->cur_ln = valtoint(pgm->lst.regs[(op >> 8) & 0xFF]);
+      
       break;
 
     case TOK_RET:
@@ -485,7 +491,8 @@ int kaj_step(kaj_pgm_t pgm)
     case TOK_RTV:
       reg = (op >> 8) & 0xFF;
      _dbgtrc("RTV: %d %lX",reg,pgm->lst.regs[reg]);
-      memcpy(&(pgm->pgm[pgm->pgm_count-2]), &(pgm->lst.regs[reg]),8);
+      v = pgm->lst.regs[reg];
+      memcpy(&(pgm->pgm[pgm->pgm_count-2]), &v,8);
       break;
 
     case TOK_RT2: 
@@ -500,25 +507,25 @@ int kaj_step(kaj_pgm_t pgm)
 
     case TOK_RT8:
       memcpy( &v, &(pgm->pgm[pgm->cur_ln]), 8);
+      pgm->cur_ln+=2;
       v = const2str(pgm->str,v);
       memcpy( &(pgm->pgm[pgm->pgm_count-2]), &v, 8);
-      pgm->cur_ln+=2;
       break;
 
     case TOK_RTI:
       n = valtoint(pgm->lst.regs[(op & 0x00FF0000) >> 16]);
       memcpy( &v, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
+      pgm->cur_ln++;
       v = const2str(pgm->str,v);
       memcpy( &(pgm->pgm[pgm->pgm_count-2]), &v, 8);
-      pgm->cur_ln++;
       break;
 
     case TOK_RTN:
       n = op >> 16;
       memcpy( &v, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
+      pgm->cur_ln++;
       v = const2str(pgm->str,v);
       memcpy( &(pgm->pgm[pgm->pgm_count-2]), &v, 8);
-      pgm->cur_ln++;
       break;
 
     case TOK_NOP:
@@ -567,9 +574,12 @@ int kaj_step(kaj_pgm_t pgm)
        pgm->cur_ln += 2;
        break;
 
+    case TOK_QUE:
+    case TOK_STK:
     case TOK_VEC:
       reg = (op >> 8) & 0xFF; 
       pgm->lst.regs[reg] = newvec(pgm,((uint32_t)op) >> 16);
+     _dbgtrc("VEC reg: %d val: %lX",reg,pgm->lst.regs[reg]);
       break;
 
     case TOK_BUF:
@@ -579,6 +589,7 @@ int kaj_step(kaj_pgm_t pgm)
 
     case TOK_KLL:
       reg = (op >> 8) & 0xFF; 
+     _dbgtrc("KLL reg: %d val: %lX",reg,pgm->lst.regs[reg]);
       kll(pgm,pgm->lst.regs[reg]);
       pgm->lst.regs[reg] = valnil;
       break;
@@ -609,28 +620,32 @@ int kaj_step(kaj_pgm_t pgm)
       pgm->lst.regs[reg] = val(valsize(pgm->lst.regs[(op >> 16) & 0xFF]));
       break;
 
-    case TOK_PSH:
-      valpush(pgm->lst.regs[(op >> 8) & 0xFF], pgm->lst.regs[(op >> 16) & 0xFF]);
+    case TOK_PSH: // Push a register
+      reg = (op >> 8) & 0xFF;
+     _dbgtrc("PSH: reg: %d val: %lX",reg,pgm->lst.regs[reg]);
+      valpush(pgm->lst.regs[reg], pgm->lst.regs[(op >> 16) & 0xFF]);
       break;
 
-    case TOK_PS2: 
+    case TOK_PS2: // Push an integer (16 bits)
+      reg = (op >> 8) & 0xFF;
       v = val(((int32_t)op)>>16);
-      valpush( pgm->lst.regs[(op >> 8) & 0xFF], v);
+     _dbgtrc("PS2: reg: %d val: %lX",reg,pgm->lst.regs[reg]);
+      valpush( pgm->lst.regs[reg], v);
       break;
 
-    case TOK_PS4:
+    case TOK_PS4: // Push an integer (32 bits)
       v = val((int32_t)(pgm->pgm[pgm->cur_ln++]));
       valpush( pgm->lst.regs[(op >> 8) & 0xFF], v);
       break;
 
-    case TOK_PS8:
+    case TOK_PS8: // push a value
       memcpy( &v, &(pgm->pgm[pgm->cur_ln]), 8);
       v = const2str(pgm->str,v);
       valpush( pgm->lst.regs[(op >> 8) & 0xFF], v);
       pgm->cur_ln+=2;
       break;
 
-    case TOK_PSI:
+    case TOK_PSI: // Push indirect @00[%2]
       n = valtoint(pgm->lst.regs[(op & 0x00FF0000) >> 16]);
       memcpy( &v, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
       v = const2str(pgm->str,v);
@@ -638,7 +653,7 @@ int kaj_step(kaj_pgm_t pgm)
       pgm->cur_ln++;
       break;
 
-    case TOK_PSN:
+    case TOK_PSN: // push indirect @00[3]
       n = op >> 16;
       memcpy( &v, pgm->pgm + pgm->pgm[pgm->cur_ln] + (n*2), 8);
       v = const2str(pgm->str,v);
@@ -648,17 +663,21 @@ int kaj_step(kaj_pgm_t pgm)
 
     case TOK_T0P:
       reg = (op >> 8) & 0xFF; 
+     _dbgtrc("TOP: reg: %d val: %lX",(op >> 16) & 0xFF,pgm->lst.regs[(op >> 16) & 0xFF]);
       pgm->lst.regs[reg] = valtop(pgm->lst.regs[(op >> 16) & 0xFF], op>>24);
       break;
 
     case TOK_TOP:
       reg = (op >> 8) & 0xFF; 
+     _dbgtrc("T0P: reg: %d val: %lX",(op >> 16) & 0xFF,pgm->lst.regs[(op >> 16) & 0xFF]);
      _dbgtrc("TOPXX: %d %lX", valtoint(pgm->lst.regs[(op >> 24) & 0xFF]),pgm->lst.regs[(op >> 24) & 0xFF]);
       pgm->lst.regs[reg] = valtop(pgm->lst.regs[(op >> 16) & 0xFF], valtoint(pgm->lst.regs[(op >> 24) & 0xFF]));
       break;
 
     case TOK_DRP:
-      valdrop(pgm->lst.regs[(op >> 8) & 0xFF], (op >> 16) & 0xFF);
+      reg = (op >> 8) & 0xFF; 
+     _dbgtrc("DRP: reg: %d val: %lX",reg,pgm->lst.regs[reg]);
+      valdrop(pgm->lst.regs[reg], (op >> 16) & 0xFF);
       break;
 
     case TOK_ENQ:

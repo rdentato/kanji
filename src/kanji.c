@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
     dbgtrc("pgm stack: -1 %08X\n                 -2 %08X\n                 -3 %08X",pgm->pgm[pgm->pgm_count-1],pgm->pgm[pgm->pgm_count-2],pgm->pgm[pgm->pgm_count-3]);
 
     kaj_setreg(pgm,1,200);
-    kaj_run(pgm,-1);
+    kaj_run(pgm,0);
 
     val_t ret;
     ret = kaj_getreg(pgm,0);

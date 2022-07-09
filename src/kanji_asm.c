@@ -170,6 +170,9 @@ static uint32_t check_opcode(kaj_pgm_t pgm, char *op)
    int32_t i,j,m;
    int c;
 
+//   if (candidate_op[0] == 'S' && candidate_op[1] == 'T' && candidate_op[2] == 'K') return TOK_VEC;
+//   if (candidate_op[0] == 'Q' && candidate_op[1] == 'U' && candidate_op[2] == 'E') return TOK_VEC;
+
    i = 0; 
    j = NUMOPCODES-1;
    while (i<=j) {
@@ -338,85 +341,6 @@ static char *arg_STO_CMP_PSH(kaj_pgm_t pgm, uint32_t op, char *start)
   return arg_S_C_R(pgm,op,s,start,op2,op4,op8,opI,opN);
 }
 
-static char *arg_JMP(kaj_pgm_t pgm, uint32_t op, char *start)
-{
-  // JMP %02
-  char *s = start;
-  char *t = s;
-  uint32_t reg;
-  if (skp(s, "'%'x?x W", &t)) {
-    reg = add_reg(pgm,s);
-    op = op + (TOK_ZEQ - TOK_JEQ);
-    op |= reg << 8;
-    add_long(pgm,op);
-    return t;
-  }
-
-  // JMP 421
-  
-  uint32_t dest = 0xFFFFFFFF;
-  if (skp(s, "D W", &t)) {
-    dest = strtol(s,NULL,10);
-  }
-  else if (skp(s, "[$@]X W", &t)) {
-    dest = strtol(s+1,NULL,16);
-  }
-
-  if (dest <= 0x00FFFFFF) {
-    if (*s == '@') op |= 0x80;
-    op  |= (dest << 8);
-    add_long(pgm,op);
-    return t;
-  }
-
-  throw(ERR_INVALID_LBL,0);
-
-  return t;
-}
-
-static char *arg_JSR(kaj_pgm_t pgm, uint32_t op, char *start)
-{
-  char *s = start;
-  char *t = s;
-  uint32_t reg;
-  uint32_t dest = 0xFFFFFFFF;
-
-  if (skp(s, "'%'x?x W", &t)) {
-    reg = add_reg(pgm,s);
-    op = TOK_ZSR;
-    op |= reg << 8;
-  }
-  else if (skp(s, "D W", &t)) {
-    dest = strtol(s,NULL,10);
-  }
-  else if (skp(s, "[$@]X W", &t)) {
-    dest = strtol(s+1,NULL,16);
-  }
-  else throw(ERR_INVALID_ARG,(int16_t)(t-start));
-
-  if (dest <= 0x00FFFFFF) {
-    if (*s == '@') op |= 0x80;
-    op  |= (dest << 8);
-  }
-  s = t;
-
-  if (skp(s, "'%'x?x W", &t)) {
-    reg = add_reg(pgm,s);
-    s = t;
-  }
-  else reg = REG_NONE;
-
-  if (skp(s, "'%'x?x W", &t)) {
-    reg |= add_reg(pgm,s) << 8;
-  }
-  else reg |= (reg << 8);
-
-  add_long(pgm,op);
-  add_long(pgm, reg);
-
-  return t;
-}
-
 static char *arg_SAV_RCL(kaj_pgm_t pgm, uint32_t op, char *start)
 {
   char *s = start;
@@ -482,6 +406,83 @@ static char *arg_2_regs(kaj_pgm_t pgm, uint32_t op, char *s)
 
 static char *arg_1_regs(kaj_pgm_t pgm, uint32_t op, char *s)
 { return arg_n_regs(pgm, op, s, 1); }
+
+static char *arg_JMP(kaj_pgm_t pgm, uint32_t op, char *start)
+{
+  // JMP %02
+  char *s = start;
+  char *t = s;
+  uint32_t reg;
+  if (skp(s, "'%'x?x W", &t)) {
+    reg = add_reg(pgm,s);
+    op = op + (TOK_ZEQ - TOK_JEQ);
+    op |= reg << 8;
+    add_long(pgm,op);
+    return t;
+  }
+
+  // JMP 421
+  
+  uint32_t dest = 0xFFFFFFFF;
+  if (skp(s, "D W", &t)) {
+    dest = strtol(s,NULL,10);
+  }
+  else if (skp(s, "[$@]X W", &t)) {
+    dest = strtol(s+1,NULL,16);
+  }
+
+  if (dest <= 0x00FFFFFF) {
+    if (*s == '@') op |= 0x80;
+    op  |= (dest << 8);
+    add_long(pgm,op);
+    return t;
+  }
+
+  throw(ERR_INVALID_LBL,0);
+
+  return t;
+}
+
+static char *arg_JSR(kaj_pgm_t pgm, uint32_t op, char *start)
+{
+  char *s = start;
+  char *t = s;
+  uint32_t reg;
+  uint32_t dest = 0xFFFFFFFF;
+
+  if (*s == '%')
+    return arg_3_regs(pgm,TOK_ZSR, s);
+
+  if (skp(s, "D W", &t)) {
+    dest = strtol(s,NULL,10);
+  }
+  else if (skp(s, "[$@]X W", &t)) {
+    dest = strtol(s+1,NULL,16);
+  }
+  else throw(ERR_INVALID_ARG,(int16_t)(t-start));
+
+  if (dest <= 0x00FFFFFF) {
+    if (*s == '@') op |= 0x80;
+    op  |= (dest << 8);
+  }
+  s = t;
+
+  if (skp(s, "'%'x?x W", &t)) {
+    reg = add_reg(pgm,s);
+    s = t;
+  }
+  else reg = REG_NONE;
+
+  if (skp(s, "'%'x?x W", &t)) {
+    reg |= add_reg(pgm,s) << 8;
+  }
+  else reg |= (reg << 8);
+
+  add_long(pgm,op);
+  add_long(pgm, reg);
+
+  return t;
+}
 
 static char *arg_reg_int(kaj_pgm_t pgm, uint32_t op, char *start)
 {
@@ -883,6 +884,8 @@ int32_t kaj_add_line3(kaj_pgm_t pgm, char *line, char **lnend)
 
         case TOK_BUF:
         case TOK_VEC:
+        case TOK_QUE:
+        case TOK_STK:
           t = arg_VEC(pgm,op,t);
           break;
 
