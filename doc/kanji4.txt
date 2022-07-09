@@ -57,6 +57,8 @@ A value can be:
 > -  00 00 XX ..  XPE R[X] expr       ; evaluate the RPN expression (a string)
 > ** vv vv XX ..  INC R[X] v          ; increment by v
 > ** vv vv XX ..  DEC R[X] v          ; decrement by v
+> ** nn nn XX ..  STK R[X] n          ; create a vec with n slots (n unsigned 16 bit)
+> ** nn nn XX ..  QUE R[X] n          ; create a vec with n slots (n unsigned 16 bit)
 > ** nn nn XX ..  VEC R[X] n          ; create a vec with n slots (n unsigned 16 bit)
 >    nn nn XX ..  MAP R[X] n          ; create a map with n slots (n unsigned 16 bit)
 > ** nn nn XX ..  BUF R[X] n          ; create a buffer with n bytes (n unsigned 16 bit)
@@ -103,7 +105,7 @@ A value can be:
 > -* 00 00 XX ..  ZLT R[X]
 > -* 00 00 XX ..  ZLE R[X]
 > -* 00 00 XX .. *ZMP R[X]
-> -  00 00 XX ..  ZSR R[X]
+> -  YY XX ZZ ..  ZSR R[Z] R[X] R[Y]
 > ** ZZ YY XX ..  SAV R[X] R[Y] R[Z] ; Save R[X] R[Y] R[Z] (in that order). 
 > ** ZZ YY XX ..  RCL R[X] R[Y] R[Z] ; Recall R[X] R[Y] R[Z] (in that order). 
 > ** 00 00 00 .. *DTA                ; End of code section/start of data section
