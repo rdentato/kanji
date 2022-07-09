@@ -29,13 +29,13 @@ run:
 
 runall: all run
 
-libkaj:
+$(TOP)/src/libkaj.a:
 	@cd $(TOP)/src ; make
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(DBGFLGS) -c $*.c
 
-u%: %.o
+u%: $(TOP)/src/libkaj.a %.o
 	$(CC) $(LNFLAGS) -o $@ $*.o $(LIBS)
 
 clean:

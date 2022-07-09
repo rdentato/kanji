@@ -1,0 +1,37 @@
+     VEC %2          ; create a new queue
+     
+     STO %3 10
+     STO %1 100
+    
+;; Add element 100-109
+@11: ENQ %2 %1
+     INC %1
+     DEC %3
+     JNE @11
+
+; Add a stop marker
+     STO %1 NIL  
+     ENQ %2 %1
+
+; Just print how many elements in the queue
+     LEN %0 %2
+     JSR @99 %0 %0
+
+; Extract elements until the stop
+@12: NXQ %3 %2
+     CMP %3 NIL
+     JEQ @13
+     JSR @99 %0 %3
+     DEQ %2
+     JMP @12
+
+@13: KLL %2          ; free the queue
+
+     RET
+
+; Print the argument and then a newline
+@99: ARG %0
+     SYS io.print %0 %0
+     STO %0 "\n"
+     SYS io.print %0 %0
+     RET

@@ -1,0 +1,16 @@
+@00:  STK %0
+      PSH %0 2
+      TOP %A %0
+      SYS io.print %C %A
+      JSR @9 %C %C
+      TOP %A %0
+      SYS io.print %C %A
+      KLL %0
+      RET
+
+@09:  TOP %A %0 
+      SYS io.print %C %A
+      DRP %0
+      PSH %0 100
+      RET
+

@@ -1,0 +1,9 @@
+@00:  STO %0 100
+      SYS io.print %C %0
+      JSR @9 %C %C
+      SYS io.print %C %0
+      RET
+
+@09:  SYS io.print %C %0
+      RET
+

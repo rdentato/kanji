@@ -1,0 +1,31 @@
+
+     BUF %2          ; create a new stack
+     
+     STO %0 10
+     STO %1 'A'     
+@1:  PSH %2 %1
+     INC %1
+     DEC %0
+     JNE @1
+
+     PSH %2 %0
+     JSR @99 %0 %2
+
+     LEN %0 %2
+     JSR @99 %0 %0
+
+     CLR %2
+
+     LEN %0 %2
+     JSR @99 %0 %0
+
+     KLL %2          ; free the buffer
+
+     RET
+
+; Print the argument and then a newline
+@99: ARG %0
+     SYS io.print %0 %0
+     STO %0 "\n"
+     SYS io.print %0 %0
+     RET

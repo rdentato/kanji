@@ -1,0 +1,13 @@
+     VEC %A
+
+     ;SYS io.stderr %0 %0
+     ;PSH %A %0
+     
+     PSH %A "OUT: "
+     PSH %A 2.3
+     PSH %A "\n"
+
+     SYS io.print %0 %A
+     KLL %A
+
+     RET
