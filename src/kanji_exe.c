@@ -86,7 +86,7 @@ static int start_JSR(kaj_pgm_t pgm, uint8_t reg, val_t input)
 
 int kaj_init(kaj_pgm_t pgm, int32_t start, uint8_t reg, val_t input)
 {
-  if (pgm->lst_type != LST_REGISTERS) return ERR_NOTASSEMBLED_PGM;
+  if (pgm->phase != FLG_ASSEMBLED) return ERR_NOTASSEMBLED_PGM;
   if (reg != REG_NONE && reg > pgm->max_regs) return ERR_INVALID_REG;
  
  _dbgtrc("sys: %d",(int)SYS_NUM);
@@ -108,7 +108,7 @@ static val_t newvec(kaj_pgm_t pgm, uint32_t sze)
 {
   val_t p = pgm->vecs;
   if (p == valnil) return valvec(sze);
-  pgm->vecs = valaux(p);
+  pgm->vecs = valnext(p);
   valresize(p, sze); 
   return p;
 }
@@ -117,7 +117,7 @@ static val_t newbuf(kaj_pgm_t pgm, uint32_t sze)
 {
   val_t p = pgm->bufs;
   if (p == valnil) return valbuf(sze);
-  pgm->bufs = valaux(p);
+  pgm->bufs = valnext(p);
   valresize(p, sze);
   return p;
 }
@@ -126,8 +126,8 @@ static void kll(kaj_pgm_t pgm, val_t v)
 { 
   _dbgtrc("KLLN %lX",v);
    switch(VALTYPE(v)) {
-     case VALVEC: valaux(v,pgm->vecs); pgm->vecs = v; break;
-     case VALBUF: valaux(v,pgm->bufs); pgm->bufs = v; break;
+     case VALVEC: valnext(v,pgm->vecs); pgm->vecs = v; break;
+     case VALBUF: valnext(v,pgm->bufs); pgm->bufs = v; break;
    }
   _dbgtrc("KLLD");
 }
@@ -726,7 +726,7 @@ int kaj_step(kaj_pgm_t pgm)
 int kaj_run(kaj_pgm_t pgm, int32_t start)
 {
 
-  if (pgm->lst_type != LST_REGISTERS) return ERR_NOTASSEMBLED_PGM;
+  if (pgm->phase != FLG_ASSEMBLED) return ERR_NOTASSEMBLED_PGM;
   
   if (start >=0) pgm->cur_ln = start;
 

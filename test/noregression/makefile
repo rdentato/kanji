@@ -15,7 +15,7 @@ LIBS = -L $(TOP)/src -lkaj -lm
 ls:
 	@echo "Targets: all run runall clean $(TESTS)$(subst ut_,x_,$(TESTS))"
 
-all: libkaj
+all:
 	@for f in $(TESTS) ; do \
      make $$f ;\
    done
@@ -29,7 +29,7 @@ run:
 
 runall: all run
 
-$(TOP)/src/libkaj.a:
+$(TOP)/src/libkaj.a: $(TOP)/src/*.c
 	@cd $(TOP)/src ; make
 
 %.o: %.c

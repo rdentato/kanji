@@ -39,8 +39,8 @@ int main(int argc, char *argv[])
     dbgmst(pgm, "Can't create kanji program");
 
     err = kaj_fromstring( pgm,
-                  "STO %1 %0\n" // register 0 is in/out param
-                  "ARG %2   \n" // You can retrieve it with ARG
+                  "STO %1 %0\n" // register 0 is the output param
+                  "ARG %2   \n" // You can retrieve input with ARG
                   "RTV 3.14 \n"
                   "RET",
                 NULL);
@@ -49,14 +49,16 @@ int main(int argc, char *argv[])
     err = kaj_init(pgm,0,0x00,val(5));
     dbgchk(err == 0, "Got error: %d",err);
 
-    err = kaj_run(pgm,0);
+    ret = kaj_setreg(pgm,0,val(6));
+ 
+     err = kaj_run(pgm,0);
     dbgchk(err == 0, "Got error: %d",err);
 
     ret = kaj_getreg(pgm,0);
     dbgchk(ret == val(3.14), "Return error. Got: %lX",ret);
 
     ret = kaj_getreg(pgm,1);
-    dbgchk(ret == val(5), "Return error. Got: %lX",ret);
+    dbgchk(ret == val(6), "Return error. Got: %lX",ret);
 
     ret = kaj_getreg(pgm,2);
     dbgchk(ret == val(5), "Return error. Got: %lX",ret);

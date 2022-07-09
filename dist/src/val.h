@@ -514,12 +514,10 @@ int32_t val_count2(val_t v, int32_t n)
 val_t val_aux2(val_t v, val_t p)
 {
   val_info_t vv;
-  
+ _dbgtrc("AUX: %lX %lX",v,p);
   vv = (val_info_t)(valtoptr(v));
   if (p != valfalse) vv->aux = p;
-  p = vv->aux;
-
-  return p;
+  return vv->aux;
 }
 
 int32_t val_refs1(val_t v)

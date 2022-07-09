@@ -59,7 +59,7 @@ kaj_pgm_t kaj_new(int32_t pgm_init_size, int32_t lbl_init_size, uint16_t stk_siz
 
   pgm->lst_size  = lbl_init_size;
   pgm->lst_count = 0;
-  pgm->lst_type  = LST_UNSORTED_LBL;
+  pgm->phase  = FLG_ADDLINES;
 
   pgm->pgm_size  = pgm_init_size;
   pgm->pgm_count = 0; 
@@ -92,8 +92,8 @@ void *kaj_free(kaj_pgm_t pgm)
     if (pgm->lst.lbl) free (pgm->lst.lbl);
     if (pgm->pgm) free (pgm->pgm);
     if (pgm->str) free (pgm->str);
-    for (val_t p=pgm->vecs; p != valnil; ) { val_t v = p; p = valaux(p); valfree(v); }
-    for (val_t p=pgm->bufs; p != valnil; ) { val_t v = p; p = valaux(p); valfree(v); }
+    for (val_t p=pgm->vecs; p != valnil; ) { val_t v = p; p = valnext(p); valfree(v); }
+    for (val_t p=pgm->bufs; p != valnil; ) { val_t v = p; p = valnext(p); valfree(v); }
     pgm->vecs = valnil;
     pgm->bufs = valnil;
     free(pgm);

@@ -31,7 +31,7 @@ static uint32_t lbl2int(char *s)
 static void add_label(kaj_pgm_t pgm, char *lbl)
 {
   uint32_t lblint;
-  throwif (pgm->lst_type == LST_REGISTERS, ERR_EXECUTABLE_PGM);
+  throwif (pgm->phase == FLG_ASSEMBLED, ERR_EXECUTABLE_PGM);
   if (pgm->lst_count >= pgm->lst_size ) {
     pgm->lst_size += (pgm->lst_size / 2);
     pgm->lst.lbl = realloc(pgm->lst.lbl, sizeof(uint64_t) * pgm->lst_size);
@@ -924,9 +924,9 @@ static int lblcmp(const void *a, const void *b)
 static int32_t lbl2offset(kaj_pgm_t pgm, int32_t lbl)
 {
 
-  if (pgm->lst_type == LST_UNSORTED_LBL) {
+  if (pgm->phase == FLG_ADDLINES) {
     qsort(pgm->lst.lbl, pgm->lst_count,sizeof(uint64_t),lblcmp);
-    pgm->lst_type = LST_SORTED_LBL;
+    pgm->phase = FLG_ASSEMBLING;
     // Check duplicates
     for (int k=1; k<pgm->lst_count; k++) {
       throwif ((pgm->lst.lbl[k] & 0xFFFFFFFF00000000) == (pgm->lst.lbl[k-1] & 0xFFFFFFFF00000000) , ERR_DUPLICATE_LBL);
@@ -960,7 +960,7 @@ int kaj_assemble(kaj_pgm_t pgm)
   int32_t  lbl;
   int32_t  offset;
 
-  if (pgm->lst_type == LST_REGISTERS) return ERR_EXECUTABLE_PGM;
+  if (pgm->phase == FLG_ASSEMBLED) return ERR_EXECUTABLE_PGM;
   if (pgm->pgm_err != ERR_NONE) return pgm->pgm_err;
   
   if (pgm->pgm_flg & FLG_DATA) {
@@ -1021,7 +1021,7 @@ int kaj_assemble(kaj_pgm_t pgm)
     pgm->lst_count = pgm->max_regs+1; // Used as stak pointer.
     pgm->lst.regs = realloc(pgm->lst.lbl,sizeof(val_t)*(pgm->lst_size));
     throwif(pgm->lst.regs == NULL, ERR_NO_MEMORY);
-    pgm->lst_type = LST_REGISTERS;
+    pgm->phase = FLG_ASSEMBLED;
 
     // Now extend pgm to make room for enough stack space
     if (pgm->stk_size <=0) pgm->stk_size = 256;
