@@ -109,7 +109,8 @@ static val_t newvec(kaj_pgm_t pgm, uint32_t sze)
   val_t p = pgm->vecs;
   if (p == valnil) return valvec(sze);
   pgm->vecs = valnext(p);
-  valresize(p, sze); 
+  valresize(p, sze);
+  valcount(p,0);
   return p;
 }
 
@@ -119,6 +120,7 @@ static val_t newbuf(kaj_pgm_t pgm, uint32_t sze)
   if (p == valnil) return valbuf(sze);
   pgm->bufs = valnext(p);
   valresize(p, sze);
+  valcount(p,0);
   return p;
 }
 
@@ -140,7 +142,6 @@ static val_t const2str(char *str, val_t v)
 
   return v;
 }
-
 
 int kaj_step(kaj_pgm_t pgm) 
 {
@@ -196,6 +197,62 @@ int kaj_step(kaj_pgm_t pgm)
       v = const2str(pgm->str,v);
       pgm->lst.regs[(op >> 8) & 0xFF] = v;
       pgm->cur_ln++;
+      break;
+
+    case TOK_LCL:
+      v = newvec(pgm,op >> 8);
+      valnext(v,pgm->lcls);
+      pgm->lcls = v;
+      break;
+
+    case TOK_LKL:
+      v = pgm->lcls;
+      if (v != valnil) {
+        // Remove from the list of locals
+        pgm->lcls = valnext(v);
+        // Add to the list of free vectors
+        valnext(v,pgm->vecs); 
+        pgm->vecs = v;
+      }
+      break;
+
+    case TOK_LRL:
+      n = op >> 24;
+      v = pgm->lcls;
+      reg = (op >> 8) & 0xFF;
+ 
+      while (n>0 && v != valnil) { // get upvalues
+        v = valnext(v);
+        n--;
+      }
+        
+      if (v != valnil) {
+        v = valget(v,val((op >> 16) && 0xFF));
+      }
+
+      if ((reg != REG_NONE) && (reg <= pgm->max_regs)) {
+        pgm->lst.regs[reg] = v;
+      }
+
+     _dbgtrc("LRL: reg: %d v: %lX R:%lX (max: %d)",reg,v,pgm->lst.regs[reg],pgm->max_regs);
+      break;
+
+    case TOK_LLR:
+      n = op >> 24;
+      v = pgm->lcls;
+      reg = (op >> 16) & 0xFF;
+
+      while (n>0 && v != valnil) { // get upvalues
+        v = valnext(v);
+        n--;
+      }
+        
+      if (v != valnil) {
+        if (reg == REG_NONE || reg >= pgm->max_regs) 
+          valset(v,val((op >> 8) && 0xFF),valnil);
+        else
+          valset(v,val((op >> 8) && 0xFF),pgm->lst.regs[reg]);
+      }
       break;
 
     case TOK_ADD:
@@ -535,7 +592,7 @@ int kaj_step(kaj_pgm_t pgm)
     case TOK_SAV:
       for (int k = 8; k<=24; k+=8) {
         reg = (op >> k) & 0xFF;
-        if (reg == 0xFF) break;
+        if (reg == REG_NONE) break;
         if (pgm->lst_count >= pgm->lst_size) break;
         pgm->lst.regs[pgm->lst_count++] = pgm->lst.regs[reg];
       }
@@ -544,7 +601,7 @@ int kaj_step(kaj_pgm_t pgm)
     case TOK_RCL:
       for (int k = 8; k<=24; k+=8) {
         reg = (op >> k) & 0xFF;
-        if (reg == 0xFF) break;
+        if (reg == REG_NONE) break;
         if (pgm->lst_count <= pgm->max_regs+1) break;
         pgm->lst.regs[reg] = pgm->lst.regs[--pgm->lst_count];
       }

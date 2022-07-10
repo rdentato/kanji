@@ -72,6 +72,7 @@ kaj_pgm_t kaj_new(int32_t pgm_init_size, int32_t lbl_init_size, uint16_t stk_siz
 
   pgm->vecs = valnil;
   pgm->bufs = valnil;
+  pgm->lcls = valnil;
 
   pgm->str       = NULL;
   pgm->str_size  = 0;

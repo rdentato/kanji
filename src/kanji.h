@@ -41,6 +41,7 @@ typedef struct kaj_pgm_s {
   } lst;
   val_t     vecs;
   val_t     bufs;
+  val_t     lcls;
   char     *str; // constant strings
   int32_t   str_size;
   int32_t   str_count;
@@ -51,9 +52,9 @@ typedef struct kaj_pgm_s {
   int32_t   max_pgm;
   int32_t   cur_ln;
   int32_t   cur_col;
-  uint32_t  dta_start;
+ uint32_t   dta_start;
   int16_t   pgm_err;
-  uint16_t  stk_size;
+ uint16_t   stk_size;
   uint8_t   pgm_flg;
   uint8_t   pgm_cmpflg;
   uint8_t   phase;

@@ -45,6 +45,9 @@ static void add_label(kaj_pgm_t pgm, char *lbl)
 static uint32_t add_reg(kaj_pgm_t pgm, char *s)
 {
   uint32_t reg;
+  
+  if (s[1]<'0' || 'f'<s[1]) return REG_NONE; // '%' with no hex afterward signify no reg
+
   reg = strtol(s+1,NULL,16);
   if ((reg != REG_NONE) && (pgm->max_regs < reg))
     pgm->max_regs = reg;
@@ -228,7 +231,7 @@ static char *arg_S_C_R(kaj_pgm_t pgm, uint32_t op, char *s, char *start, uint8_t
   }
 
   // STO R[X] R[Y]
-  if (skp(s,"'%'x?x W",&t)) {
+  if (skp(s,"'%'?x?x W",&t)) {
     reg = add_reg(pgm,s);
     op |= reg << sh;
     add_long(pgm,op);
@@ -266,7 +269,7 @@ static char *arg_S_C_R(kaj_pgm_t pgm, uint32_t op, char *s, char *start, uint8_t
       if (k >= 0) {
         op |= ((k & 0xFFFF) << 16) | opN;
       }
-      else if (skp(s,"'%'x?x W ']' W",&t)) {
+      else if (skp(s,"'%'?x?x W ']' W",&t)) {
         reg = add_reg(pgm,s);
         op = reg << sh | (op & 0xFF00) | opI;
       }
@@ -332,7 +335,7 @@ static char *arg_STO_CMP_PSH(kaj_pgm_t pgm, uint32_t op, char *start)
                   break;
   }
 
-  if (!skp(s,"'%'x?x W",&t)) throw(ERR_INVALID_REG,0);
+  if (!skp(s,"'%'?x?x W",&t)) throw(ERR_INVALID_REG,0);
   
   reg = add_reg(pgm,s);
   op |= reg << 8;
@@ -349,16 +352,16 @@ static char *arg_SAV_RCL(kaj_pgm_t pgm, uint32_t op, char *start)
   uint32_t reg2 = 0x00FF0000;
   uint32_t reg3 = 0xFF000000;
 
-  if (!skp(s, "'%'x?x W", &t)) throw(ERR_INVALID_REG,0);
+  if (!skp(s, "'%'?x?x W", &t)) throw(ERR_INVALID_REG,0);
 
   reg1 = add_reg(pgm,s) << 8;
   s = t;
 
-  if (skp(s, "'%'x?x W", &t)) {
+  if (skp(s, "'%'?x?x W", &t)) {
     reg2 = add_reg(pgm,s) << 16;
     s = t;
  
-    if (skp(s, "'%'x?x W", &t)) {
+    if (skp(s, "'%'?x?x W", &t)) {
       reg3 = add_reg(pgm,s) << 24;
       s = t;
     }
@@ -373,21 +376,21 @@ static char *arg_n_regs(kaj_pgm_t pgm, uint32_t op, char *start, int n)
   char *t = s;
   uint32_t reg;
 
-  if (!skp(s, "'%'x?x W", &t)) throw(ERR_INVALID_REG,0);
+  if (!skp(s, "'%'?x?x W", &t)) throw(ERR_INVALID_REG,0);
 
   reg = add_reg(pgm,s);
   op |= reg << 8;
   s = t;
 
   if (n>1) {
-    if (!skp(s, "'%'x?x W", &t)) throw(ERR_INVALID_REG,(int16_t)(t-start));
+    if (!skp(s, "'%'?x?x W", &t)) throw(ERR_INVALID_REG,(int16_t)(t-start));
   
     reg = add_reg(pgm,s);
     op |= reg << 16;
     s = t;
   
     if (n>2) {
-      if (!skp(s, "'%'x?x W", &t)) throw(ERR_INVALID_REG,(int16_t)(t-start));
+      if (!skp(s, "'%'?x?x W", &t)) throw(ERR_INVALID_REG,(int16_t)(t-start));
     
       reg = add_reg(pgm,s);
       op |= reg << 24;
@@ -413,7 +416,7 @@ static char *arg_JMP(kaj_pgm_t pgm, uint32_t op, char *start)
   char *s = start;
   char *t = s;
   uint32_t reg;
-  if (skp(s, "'%'x?x W", &t)) {
+  if (skp(s, "'%'?x?x W", &t)) {
     reg = add_reg(pgm,s);
     op = op + (TOK_ZEQ - TOK_JEQ);
     op |= reg << 8;
@@ -467,13 +470,13 @@ static char *arg_JSR(kaj_pgm_t pgm, uint32_t op, char *start)
   }
   s = t;
 
-  if (skp(s, "'%'x?x W", &t)) {
+  if (skp(s, "'%'?x?x W", &t)) {
     reg = add_reg(pgm,s);
     s = t;
   }
   else reg = REG_NONE;
 
-  if (skp(s, "'%'x?x W", &t)) {
+  if (skp(s, "'%'?x?x W", &t)) {
     reg |= add_reg(pgm,s) << 8;
   }
   else reg |= (reg << 8);
@@ -491,7 +494,7 @@ static char *arg_reg_int(kaj_pgm_t pgm, uint32_t op, char *start)
   uint32_t reg;
   int32_t n = -1;
 
-  if (!skp(s, "'%'x?x W", &t)) throw(ERR_INVALID_REG,0);
+  if (!skp(s, "'%'?x?x W", &t)) throw(ERR_INVALID_REG,0);
 
   reg = add_reg(pgm,s);
   op |= reg << 8;
@@ -515,14 +518,14 @@ static char *arg_STR(kaj_pgm_t pgm, uint32_t op, char *start)
   uint32_t reg;
   int32_t n = -1;
 
-  if (skp(s, "'%'x?x W", &t)) {
+  if (skp(s, "'%'?x?x W", &t)) {
     reg = add_reg(pgm,s);
     op |= reg << 8;
     s = t;
   }
   else throw(ERR_INVALID_ARG);
 
-  if (skp(s, "'%'x?x W", &t)) {
+  if (skp(s, "'%'?x?x W", &t)) {
     reg = add_reg(pgm,s);
     op |= reg << 16;
     add_long(pgm,op);
@@ -546,14 +549,14 @@ static char *arg_XPR(kaj_pgm_t pgm, uint32_t op, char *start)
   char *t = s;
   uint32_t reg;
 
-  if (skp(s, "'%'x?x W", &t)) {
+  if (skp(s, "'%'?x?x W", &t)) {
     reg = add_reg(pgm,s);
     op |= reg << 8;
     s = t;
   }
   else throw(ERR_INVALID_ARG);
 
-  if (skp(s, "'%'x?x W", &t)) {
+  if (skp(s, "'%'?x?x W", &t)) {
     reg = add_reg(pgm,s);
     op |= reg << 16;
     add_long(pgm,op);
@@ -578,19 +581,19 @@ static char *arg_SHIFT(kaj_pgm_t pgm, uint32_t op, char *start, uint32_t op_alt)
   uint32_t reg;
   uint32_t args = 0;;
 
-  if (!skp(s, "'%'x?x W", &t)) throw(ERR_INVALID_REG,0);
+  if (!skp(s, "'%'?x?x W", &t)) throw(ERR_INVALID_REG,0);
 
   reg = add_reg(pgm,s);
   args |= reg << 8;
   s = t;
 
-  if (!skp(s, "'%'x?x W", &t)) throw(ERR_INVALID_REG,(int16_t)(t-start));
+  if (!skp(s, "'%'?x?x W", &t)) throw(ERR_INVALID_REG,(int16_t)(t-start));
   
   reg = add_reg(pgm,s);
   args |= reg << 16;
   s = t;
   
-  if (skp(s, "'%'x?x W", &t)) {
+  if (skp(s, "'%'?x?x W", &t)) {
     reg = add_reg(pgm,s);
     args |= (reg << 24);
     s = t;
@@ -625,13 +628,13 @@ static char *arg_SYS(kaj_pgm_t pgm, uint32_t op, char *start)
 
   s = t;
  _dbgtrc("1: %s",t);
-  if (skp(s, "'%'x?x W", &t)) {
+  if (skp(s, "'%'?x?x W", &t)) {
     reg1 = add_reg(pgm,s);
   }
   s = t;
   reg2 = reg1;   
  _dbgtrc("2: %s",t);
-  if (skp(s, "'%'x?x W", &t)) {
+  if (skp(s, "'%'?x?x W", &t)) {
     reg2 = add_reg(pgm,s);
   }
 
@@ -727,7 +730,7 @@ static char *arg_VEC(kaj_pgm_t pgm, uint32_t op, char *start)
   char *t = s;
   uint32_t reg;
 
-  if (!skp(s, "'%'x?x W", &t)) throw(ERR_INVALID_REG,0);
+  if (!skp(s, "'%'?x?x W", &t)) throw(ERR_INVALID_REG,0);
 
   reg = add_reg(pgm,s);
   op |= reg << 8;
@@ -740,6 +743,57 @@ static char *arg_VEC(kaj_pgm_t pgm, uint32_t op, char *start)
   if (n <= 0) n = 16;
  
   add_long(pgm, ((n << 16) | op));
+  return t;
+}
+
+static char *arg_LCL(kaj_pgm_t pgm, uint32_t op, char *start)
+{
+  char *s = start;
+  char *t = s;
+  uint32_t reg = REG_NONE;
+  int32_t n = 0;
+
+
+  if (skp(s, "+d W",&t)) { // LCL
+    add_long(pgm, (atoi(s) << 8) | TOK_LCL);
+    return t;
+  }
+
+  if (skp(s,"'#'x?x W",&t)) {
+    reg = strtol(s+1,NULL,16) << 8;
+    s = t;
+
+    if (skp(s,"'%'x?x W",&t)) {
+      reg |= add_reg(pgm,s) << 16 ;
+      s = t;
+      if (skp(s,"+d W",&t)) {
+        n = (atoi(s) & 0xFF) << 24;
+      }
+
+      add_long(pgm, n | reg | TOK_LLR);
+      return t;
+    }
+  }
+
+  if (skp(s,"'%'x?x W",&t)) {
+    reg = add_reg(pgm,s) << 8;
+    s = t;
+
+    if (skp(s,"'#'x?x W",&t)) {
+      reg |= strtol(s+1,NULL,16) << 16 ;
+      s = t;
+      if (skp(s,"+d W",&t)) {
+        n = (atoi(s) & 0xFF) << 24;
+      }
+
+      add_long(pgm, n | reg | TOK_LRL);
+      return t;
+    }
+  }
+
+  skp(s,"W",&t);
+
+  add_long(pgm, TOK_LKL);
   return t;
 }
 
@@ -853,6 +907,10 @@ int32_t kaj_add_line3(kaj_pgm_t pgm, char *line, char **lnend)
 
         case TOK_NOP:
           t = arg_NOP(pgm,op,t);
+          break;
+
+        case TOK_LCL:
+          t = arg_LCL(pgm,op,t);
           break;
 
         case TOK_HLT: pgm->pgm_flg &= ~FLG_DATA; op = 0;
@@ -1018,12 +1076,12 @@ int kaj_assemble(kaj_pgm_t pgm)
     // Let's allocate registers, instead! (with room for an additional 256 regs for SAV/RCL).
     if (pgm->max_regs == 0) pgm->max_regs = 1; // at least Register %00 must exist
     pgm->lst_size = pgm->max_regs+256;
-    pgm->lst_count = pgm->max_regs+1; // Used as stak pointer.
+    pgm->lst_count = pgm->max_regs+1; // Used as stack pointer.
     pgm->lst.regs = realloc(pgm->lst.lbl,sizeof(val_t)*(pgm->lst_size));
     throwif(pgm->lst.regs == NULL, ERR_NO_MEMORY);
     pgm->phase = FLG_ASSEMBLED;
 
-    // Now extend pgm to make room for enough stack space
+    // Now extend pgm to make room for enough stack space for JSR
     if (pgm->stk_size <=0) pgm->stk_size = 256;
     pgm->pgm_size = pgm->pgm_count+pgm->stk_size;
     pgm->pgm = realloc(pgm->pgm,pgm->pgm_size * sizeof(uint32_t));
