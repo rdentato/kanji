@@ -25,3 +25,8 @@ It's a simple CPU-like machine with up to 254 registers, each register can hold 
 
 It can access external C functions (with the proper interface) and its code can be "called" from C functions.
 
+You can check what is planned/in progress/done [on the project kanban page](https://github.com/users/rdentato/projects/1).
+
+I really welcome any question, suggestion, and help offer you may have.
+Join the <a href="https://discord.gg/vPgsxHcgXX"><img src="https://github.com/rdentato/skp/blob/master/docs/Discord_button.jpg?raw=true" title="Discord Channel"></a> channel to discuss about them.
+
