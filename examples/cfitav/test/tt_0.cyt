@@ -1,0 +1,7 @@
+(let addy  (λ (x) (+ x y)))
+(let add   (λ (x y) (addy x)))
+(let hadd  (λ (x y) (/ (addy x) 2)) )
+(let y 7)
+(print (add 2 4))    ; will print 6
+(print (hadd 2 4))   ; will print 3
+
