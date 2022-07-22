@@ -32,7 +32,7 @@
 typedef uint64_t val_t;
 
 typedef struct val_info_s {
-     val_t aux;    // For GC (but not necessarily) It MUST be the first field!
+    val_t  aux;    // For GC (but not necessarily) It MUST be the first field!
      void *arr;
   int32_t  size;
   int32_t  count;
@@ -40,11 +40,11 @@ typedef struct val_info_s {
   int32_t  refs;   // For GC (but not necessarily)
 } *val_info_t;
 
-typedef struct val_map_s {
-  val_t   key;
-  val_t   val;
-  uint32_t left;
-  uint32_t right;
+typedef struct val_map_s { // Implemented as an AA tree
+    val_t key;
+    val_t val;
+ uint32_t left;
+ uint32_t right;
 } *val_map_t;
 
 #define VAL_MASK      0xFFFF000000000000llu
@@ -88,6 +88,7 @@ extern char *val_nilstr;
 #define valisptr(x)  (((x) & VAL_MASK) == VAL_PTR)
 #define valisvec(x)  (((x) & VAL_MASK) == VAL_VEC)
 #define valisstr(x)  (((x) & VAL_MASK) == VAL_STR)
+#define valismap(x)  (((x) & VAL_MASK) == VAL_MAP)
 
 #define valisbool(x) (((x) & VAL_BOLTYPE) == valfalse)
 
@@ -213,6 +214,9 @@ int32_t valsize(val_t v);
 
   val_t valfree(val_t v);
   val_t valresize(val_t v, int32_t sz);
+
+  val_t val_mapset(val_info_t vv, val_t i, val_t x);
+
 
     int valcmp(val_t a, val_t b);
   val_t valadd(val_t a, val_t b);
@@ -455,9 +459,7 @@ val_t valresize(val_t v, int32_t sz)
   int32_t nsz = 1;
 
   switch(VALTYPE(v)) {
-    case VALMAP: while (nsz < sz) nsz <<= 1;
-                 sz = nsz;
-                 esz = sizeof(struct val_map_s);
+    case VALMAP: esz = sizeof(struct val_map_s);
                  break;
 
     case VALVEC: esz = sizeof(val_t);            
@@ -660,6 +662,8 @@ val_t valset(val_t v, val_t i, val_t x)
 
   if ((vv = valtoptr(v)) == NULL) return valnil;
 
+  if (VALTYPE(v) != VALMAP) return val_mapset(vv,i,x);
+
   if (valisint(i)) ii = valtoint(i);
   else if (i == valnil) ii = -1;
   else return valnil;
@@ -717,18 +721,19 @@ val_t valget(val_t v, val_t i)
 void valclear(val_t v)
 {
   val_info_t vv;
-  switch (VALTYPE(v)) {
-    case VALMAP:
-    case VALBUF:
-    case VALVEC: if ((vv = valtoptr(v)) != NULL) {
-                     vv->count = vv->first = 0;
-                     if (vv->arr) ((char *)(vv->arr))[0] = '\0';
-                 }
-                 break;
+  if ((vv = valtoptr(v)) != NULL) {
+    switch (VALTYPE(v)) {
+      case VALBUF: if (vv->arr) ((char *)(vv->arr))[0] = '\0';
+      case VALVEC: vv->count = v->first = 0;
+                   break;
+       
+      case VALMAP: vv->first = -1;
+                   vv->count = 0;
+                   break;
+    }
   }
   return;
 }
-
 
 val_t valpush(val_t v, val_t x)
 {
@@ -810,39 +815,106 @@ val_t val_bufcpy4(val_t dst, char *src, int32_t start, int32_t n)
   return valnil;
 }
 
-val_t valmap(int32_t sz)
+#define VAL_MAPNULL = valconst(0xf,1);
+
+int32_t val_nodelevel(val_t map, int32_t node, int32_t lvl)
 {
-  val_info_t vv;
-  val_t vvec = valnil;
+  val_map_t n;
 
-  int32_t new_sz = 1;
+  if (!valismap(map) || node >= valcount(map) || node <1) return 0;
 
-  if (sz <= 0) sz = 8;
-  while (new_sz < sz) new_sz <<= 1;
-  sz = new_sz;
+  n = valarray(map)[node];
 
-  vv = malloc(sizeof(struct val_info_s));
-  if (vv == NULL) return valnil;
-
-  vv->arr = NULL;
-  vv->size = sz;
-  vv->first = 0;
-  vv->count = 0;
-  vv->aux = valnil;
-
-  vv->arr = malloc(sz * sizeof(struct val_map_s)); 
-  if (vv->arr == NULL) {
-    vv->size = 0;
-    free(vv);
-    return valnil;
-  }
-
-  vvec = VAL_MAP | (((uintptr_t)vv) & VAL_PTRMASK);
-  return vvec;
+  if (lvl>0) n->right = (((n)->right) & 0x03FFFFFF) | ((lvl & 0x3F) << 26) ;
+  else lvl = (((m)->right) & 0xFC000000) >> 26 ;
+  return lvl ;
 }
 
-int32_t valmapset(val_t map, val_t k, val_t v)
+int32_t val_noderight(val_t map, int32_t node, int32_t set) 
 {
+  val_map_t n;
+
+  if (!valismap(map) || node >= valcount(map) || node <1) return 0;
+
+  n = valarray(map)[node];
+
+  if (set >= 0) {
+    set &= 0x03FFFFFF;
+    n->right = ((n->right) & 0xFC000000) | set ;
+  }
+  else set = (n->right) & 0x03FFFFFF;
+  return set;
+} 
+
+int32_t val_nodeleft(val_t map, int32_t node, int32_t set)
+{
+  val_map_t n;
+
+  if (!valismap(map) || node >= valcount(map) || node <1) return 0;
+
+  n = valarray(map)[node];
+
+  if (set >= 0) {
+    set &= 0x03FFFFFF;
+    n->lett = set ;
+  }
+  else set = n->left;
+  return set;
+} 
+
+int32_t val_nodenew(val_t map)
+{
+  // Check if there's a node in the free list
+  // Otherwise add at least a node 
+  // Init it pointing to nil
+}
+
+int32_t val_nodeinsert(val_t map, val_t key, val_t val)
+{
+
+}
+
+int32_t val_nodesearch(val_t map, val_t key)
+{
+
+}
+
+int32_t val_nodedel(val_t map, val_t key)
+{
+
+}
+
+val_t val_nodeval(val_t map, int32_t node, val_t val)
+{
+
+}
+
+val_t val_nodekey(val_t map, int32_t node, val_t key)
+{
+  
+}
+
+val_t valmap(int32_t sz)
+{ val_t m;
+  val_info_t vv;
+  if (sz < 1) sz = 8;
+  m = val_vec(sz, sizeof(struct val_info_s), VAL_MAP);
+  if (valismap(m)) { // Node 0 is used as sentinel
+    vv = valptr(m);
+    veccount(m) = 1;
+    val_map_t node = valarray(m);
+    node->left = 0
+    node->right = 0;
+    node->key = VAL_MAPNULL;
+    node->val = VAL_MAPNULL;
+  }
+  return val;
+}
+
+val_t val_mapset(val_info_t map, val_t k, val_t v)
+{
+  val_info_t vv;
+  if (!val_makeroom())
   return 0;
 }
 
