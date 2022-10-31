@@ -1,7 +1,0 @@
-      STO %1 NIL
-      CMP %1 NIL
-      STO %2 1
-      JEQ @1
-      STO %2 2
-@1:   RTV %2
-      RET

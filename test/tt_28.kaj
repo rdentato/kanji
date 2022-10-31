@@ -1,8 +1,0 @@
-    STO %1 5 
-    STO %2 2 
-    JSR @1 %1 %2 
-    RET    
-@1: ARG %3 
-    ADD %3 %3 %3 
-    RTV %3
-    RET

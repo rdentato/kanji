@@ -3,6 +3,8 @@
 
 TOP=..
 
+CC=gcc
+
 OPT=-O2
 #OPT=-ggdb3 -O0
 
@@ -15,6 +17,8 @@ all:
 test%: ut_test%.o
 	$(CC) $(LNFLAGS) -o $@ ut_test$*.o 
 
+valtest: valtest.o
+
 clean:
-	$(RM) *.o test*
+	$(RM) *.o test* valtest 
 

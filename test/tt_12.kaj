@@ -1,8 +1,0 @@
-  
-  STO %02 3.1415926535 ; %2 <- pi
-  STO %01 2             
-  DIV %02 %02 %01      ; %2 <- pi/2
-  SYS mth.sin %2 %2    ; %2 <- sin(pi/2)
-  SYS io.print %1 %2   ; print value
-  SYS io.print %1 %1   ; print '\n' (because %1 is valnil)
-
