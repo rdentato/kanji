@@ -1,8 +1,0 @@
-; Hello!
-(2 3 4)
-(+ 3 ( + 4 2))
-(+ (def x (4)) (def y (list 3 3)) )
-(lambda () (+ x y))
-(def list 4)
-(def pippo (lambda (x y) (+ x y)))
-(pippo 3 4)
