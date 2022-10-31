@@ -1,7 +1,7 @@
 # kanji
 
 **kanji** (which translates in English as "*x<sub>1</sub> computes x<sub>2</sub> from data x<sub>3</sub> by process x<sub>4</sub>*")
-is an assembler-like scripting language that is intended to be 
+is a forth-like scripting language that is intended to be 
 used as a target for transpiling higher level interpreted languages.
 
 It may be useful in the early stages of language development if you want
