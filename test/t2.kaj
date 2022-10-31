@@ -1,0 +1,11 @@
+do
+  0 @K
+  100 @X
+  .vec @Z
+  while X 2 < do
+    X .io.print
+    X 2 - @Z[K]
+    K ++ @K
+  end
+end
+

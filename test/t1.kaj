@@ -1,0 +1,11 @@
+do
+  // 3 5 + @X[E , 4 F +] .set 
+  if G[4] 2 > do
+     3 
+  end else do
+    4 2 +
+  end
+  .print
+  if X 2 < do .io.cxcw end
+end
+

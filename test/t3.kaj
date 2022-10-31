@@ -1,0 +1,13 @@
+func .fact do
+  .stk.dup
+  if .stk.iszero .mth.not do
+  .stk.dup .stk.dup 1 + *
+  end
+end
+
+do
+  .io.read
+  .fact
+  .io.print
+end
+
