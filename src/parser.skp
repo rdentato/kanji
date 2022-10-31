@@ -1,0 +1,83 @@
+
+%
+% +  -  *  /
+% &  | ^ ~ >> << >= <= > < 
+% ++ -- 
+% && ||
+
+{
+  #include "dbg.h"
+
+  skpfunc(op) {
+                //    0123456789012
+    static char *ops="!><=+-|&%*/^~";
+    const int ops_len = 13;
+    char *p = ops;
+    int32_t n = 0;
+
+    while (*p && *p != skpcur[0]) p++;
+    if (*p == '\0') skpreturn(NULL,0);
+
+    n = p - ops  ;
+    skpcur++;
+
+    if (n <= 7  && *skpcur == *p )  {skpcur++; n+= ops_len;}
+    if (n <= 3  && *skpcur == '=' ) {skpcur++; n+= 8+ops_len;}
+
+    skpreturn(skpcur,n+1);
+  }
+}
+
+prog = fndef* _block _EOF_ ;
+
+block = _DO ( _stmt __ )+ _END ;
+
+fndef = _FUNC fndef_name func_block ;
+fndef_name = _fname;
+func_block = _block;
+
+stmt = _if / _while / __ _term   ;
+
+if = _IF __ expr then_block else_block ;
+then_block = _block ;
+else_block = (_ELSE _block)? ;
+
+while = _WHILE __ expr while_block ;
+while_block = _block ;
+
+% Expressions are in rpn form
+expr = (__ _term)+ ;
+
+term = _num / fcall / op[] / getvar / setvar;
+
+getvar =      _location ;
+setvar = _'@' _location ;
+
+location = var _index  ;
+var = _"u";
+index = (_'[' __ ndxpr __ ( _',' __ ndxpr __ )* _']')? ;
+ndxpr = _expr;
+
+% op = _"[*/%&^~] \1 '-' ?'-' \1 '+' ?'+' \1 '>' ?[>=] \1  '<' ?[<=] \1 '==' \1 '!' ?'='" ; 
+
+fcall = _fname ;
+
+fname = (_"'.' +l")+ ;
+
+num = hex / float / int ;
+
+hex = "'0' [Xx] X" ;
+float = int ("'.' *d")? ;
+int = _"D" ;
+
+_     =    (_"+s" / _"'//' N")* ;
+SPC_  =    (_"+s" / _"'//' N")+ ;
+EOF_  = __ _"!." ;
+
+IF    = __ _"'if'    !& i" __ ;
+ELSE  = __ _"'else'  !& i" __ ;
+DO    = __ _"'do'    !& i" __ ;
+FUNC  = __ _"'func'  !& i" __ ;
+WHILE = __ _"'while' !& i" __ ;
+END   = __ _"'end'   !& i" __ ;
+
