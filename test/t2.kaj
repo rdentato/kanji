@@ -1,11 +1,10 @@
 do
-  0 @K
-  100 @X
-  .vec @Z
-  while X 2 < do
-    X .io.print
-    X 2 - @Z[K]
-    K ++ @K
+  0 @!K 
+  loop do
+    "%d" .io.print
+    K ++ @K .stk.drop
+    @K @!J
+    10 >= ? break : .stk.tuck
   end
 end
 

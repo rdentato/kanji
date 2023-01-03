@@ -1,10 +1,22 @@
+/*
+**  (C) by Remo Dentato (rdentato@gmail.com)
+** 
+** This software is distributed under the terms of the MIT license:
+**  https://opensource.org/licenses/MIT
+*/
+
 #define DEBUG DEBUG_TEST
-#define VRG_MAIN
+#define VRGOPTS
 #include "vrg.h"
+
 #define DBG_MAIN
 #include "dbg.h"
+
 #define SKP_MAIN
+#define VAL_MAIN
 #include "parser.h"
+
+void generate(ast_t ast);
 
 /************************************/
 
@@ -44,17 +56,16 @@ static char *loadsource(char *fname)
 
 int main(int argc, char *argv[])
 {
-  char *zbabuf = NULL;
+  char *kajbuf = NULL;
   ast_t ast = NULL;
   FILE *src=NULL;
   FILE *hdr=NULL;
   char *s;
   int trace_enabled =0;
-  //int argn;
   char *fname="_expr_";
 
-  vrgver("zbas (a simple language)\n"
-         "v0.0.7-beta (C) 2022 Remo Dentato http://gh.dentato.com/zbas");
+  vrgver("kajc (kanji compiler)\n"
+         "v0.0.7-beta (C) 2022 Remo Dentato http://gh.dentato.com/kanji");
 
   vrgoptions(argc,argv) {
     vrgopt("-h\tPrint help and exit") {
@@ -63,7 +74,7 @@ int main(int argc, char *argv[])
     
     vrgopt("-f filename\tRun source file") {
       fname = vrgoptarg;
-      zbabuf = loadsource(fname);
+      kajbuf = loadsource(fname);
     }
 
     vrgopt("-t\tEnable tracing in parser") {
@@ -75,14 +86,14 @@ int main(int argc, char *argv[])
     }
   }
 
-  if ((zbabuf == NULL) && (vrgargn < argc)) {
+  if ((kajbuf == NULL) && (vrgargn < argc)) {
     fname = argv[vrgargn];
-    zbabuf = loadsource(fname);
+    kajbuf = loadsource(fname);
   }
 
-  if (zbabuf == NULL) vrgerror("Missing source file");
+  if (kajbuf == NULL)  vrgerror("Missing source file\n");
 
-  ast = skpparse(zbabuf,prog,trace_enabled);
+  ast = skpparse(kajbuf,prog,trace_enabled);
 
   if (asthaserr(ast)) {
     trace("In rule: '%s'",asterrrule(ast));
@@ -106,11 +117,20 @@ int main(int argc, char *argv[])
     hdr = fopen(fnamebuf,"w");
     assert(hdr);
 
+    //skptagrules();
+
     astprint(ast,hdr);
+
+    // for (int k=0; k< ast->par_cnt; k++) {
+    //   fprintf(stderr,"%d %d\n",k,ast->par[k]);
+    // }
+
     fprintf(hdr,"%d nodes\n",astnumnodes(ast));
     fclose(hdr); hdr = NULL;
     fprintf(stderr,"AST file: '%s'\n",fnamebuf);
-    
+
+    generate(ast);
+
 #if 0
     sprintf(fnamebuf,"%s"".c",bnamebuf);
     src = fopen(fnamebuf,"w");
@@ -127,7 +147,7 @@ int main(int argc, char *argv[])
   if (src) fclose(src);
   if (hdr) fclose(hdr);
    
-  if (zbabuf) free(zbabuf);
+  if (kajbuf) free(kajbuf);
   if (ast)   astfree(ast);
 
   return 0;

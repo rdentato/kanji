@@ -1,0 +1,13 @@
+
+func .factr do
+  dup 1 <= ? do drop 1 end
+           : do dup -- .factr * end
+end
+
+do
+  .io.readn
+  dup
+  .factr
+  "%d! = %d\n" .io.printf
+end
+

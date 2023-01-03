@@ -1,0 +1,24 @@
+func .a do 
+  nop
+  return
+end
+
+func .b do 
+  nop
+  return
+end
+
+func .ac do 
+  nop
+  return
+end
+
+do
+  X[ 3 4 +] .a
+  dup .io.print
+  .b
+  loop do break  end
+end
+
+
+

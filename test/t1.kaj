@@ -1,11 +1,17 @@
-do
-  // 3 5 + @X[E , 4 F +] .set 
-  if G[4] 2 > do
-     3 
-  end else do
-    4 2 +
+// print the first 10 numbers 0-9
+do 
+  0 X[]
+  loop do
+    dup 10 >= ? break
+    dup "%d\n" .io.print
+    ++
   end
-  .print
-  if X 2 < do .io.cxcw end
+  empty ? 0
+  zero ? 0xFFFF
+  4.3
+  5.12
+  "A" "" == ? exit
+  "\041" "\0" "\n" "\r" 3.4 "\010abc" 9.81 "AB"
+
 end
 

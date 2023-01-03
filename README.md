@@ -11,7 +11,7 @@ Should the perfomance prove themselves adequate to your use case,
 nothing prevents you to use it as the final run-time.
 
   
-It's a simple CPU-like machine with up to 254 registers, each register can hold a *value* which can be:
+It's a simple Forth-like VM with 26 variables, and a stack. Each *value* (hold in a register or in the stack)  can be:
 
    - a 32 bit signed integer
    - a double precision floating point

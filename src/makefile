@@ -3,15 +3,18 @@
    
 TOP=..
 
-SKPGEN=../deps/bin/skpgen
+DEPSDIR=$(TOP)/deps
+SKPGEN=$(DEPSDIR)/bin/skpgen
+DEPSBIN=$(DEPSDIR)/bin/BINARIES
 
 CC=gcc
 #CC=clang
 
 AR=ar -r
+RM=rm -f
 
 OPT=-O2 -DDEBUG=DEBUG_TEST
-OPT+=-fdata-sections -ffunction-sections
+#OPT+=-fdata-sections -ffunction-sections
 #OPT+=-ggdb3 -O0
 
 #PROFFLAGS=-pg
@@ -19,7 +22,7 @@ OPT+=-fdata-sections -ffunction-sections
 LNFLAGS= -s $(PROFFLAGS) -L. 
 #LNFLAGS+=-s -Wl,--gc-sections
 
-CFLAGS = $(PROFFLAGS) $(OPT) -Wall -I$(TOP)/src -I$(TOP)/deps/src
+CFLAGS = $(PROFFLAGS) $(OPT) -Wall -I$(TOP)/src -I$(DEPSDIR)/src
 
 OBJS = syslib.o kanji_sys.o kanji_common.o kanji_exe.o kanji_expr.o
 OP_HDRS=opcodes_str.h opcodes_tok.h
@@ -27,16 +30,34 @@ OP_HDRS=opcodes_str.h opcodes_tok.h
 %.o:%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-all:  zbasc
+all:  kajc
 
-zbasc: parser.o zbasc.o 
-	$(CC) -o $@ zbasc.o parser.o $(LNFLAGS)  
+kajc: fname.o parser.o kajc.o 
+	$(CC) -o $@ fname.o parser.o kajc.o $(LNFLAGS)  
 
-parser.c: parser.skp
+parser.c: $(SKPGEN) parser.skp parser_aux.c parser_gen.c
 	$(SKPGEN) parser
 
-parser.o: parser.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+$(SKPGEN): $(DEPSBIN)
+	cd $(DEPSDIR); make
+
+SYS_SRC=$(wildcard syslib/sys_*.c)
+SYS_OBJ=$(SYS_SRC:.c=.o)
+
+syslib.o: syslib.c syslib/syslib_proto.h 
+	$(CC) $(CFLAGS) -c -o syslib.o syslib.c
+
+syslib/syslib_proto.h: $(SYS_OBJ) syslib/build_sys
+	cd syslib; cat sys_*.c | ./build_sys 2> syslib_proto.h | sort > syslib_tab.h 
+
+syslib/build_sys: syslib/build_sys.o fname.o
+
+clean:
+	$(RM) *.o kajc parser.c parser.h
+	$(RM) syslib/*.o syslib/syslib_proto.h syslib/syslib_tab.h syslib/build_sys
+
+
+######## 
 
 kanji: libkaj.a kanji.o
 	$(CC) -o $@ kanji.o $(LNFLAGS) 
@@ -53,32 +74,5 @@ kanji_run: $(OP_HDRS) $(OBJS)
 kanji_sys: kanji_sys.c
 	$(CC) -DSYS_MAIN $(CFLAGS) -o $@ kanji_sys.c
 
-opcodes_str.h: opcodes.lst
-	sort -u opcodes.lst | awk 'BEGIN { print "char *opcodes = " ; n=0 } \
-	                                 { if (n>0) print "\"\\0\""; n=n+1; printf "\"%s\"",$$0} \
-	                             END { print ";" }' > opcodes_str.h
-
-opcodes_tok.h: opcodes.lst
-	sort -u opcodes.lst | awk 'BEGIN { n=1 } \
-	                                 { printf "#define TOK_%s 0x%02X\n",$$0,n; n=n+1 } \
-	                             END { print "#define NUMOPCODES " n-1 }' > opcodes_tok.h
-
-syslib.c: kanji_sys syslib/*.c
-	@rm -f kanji_syslib.c
-	@echo "#include \"val.h\"" > syslib.tmp
-	@for f in syslib/*.c; do \
-	   echo $$f; \
-	   echo "#line 1 \"$$f\"" >> syslib.tmp ; \
-		 cat $$f >> syslib.tmp ; \
-	done ;
-	sed -n 's/^ *val_t *\([a-zA-Z0-9]*\)\.\([a-zA-Z0-9]*\) *(.*/\1.\2/p' syslib.tmp > syslib.fnc
-	sed    's/^ *val_t *\([a-zA-Z0-9]*\)\.\([a-zA-Z0-9]*\) *(/val_t sys_\1_\2(/' syslib.tmp > syslib.c
-	sed    's/\([a-zA-Z0-9]*\)\.\([a-zA-Z0-9]*\)/val_t sys_\1_\2(val_t);/' syslib.fnc > syslib_fnc.h
-	./kanji_sys < syslib.fnc > syslib.tmp
-	sort syslib.tmp > syslib_lst.h
-	rm -f syslib.tmp syslib.fnc
-
-clean:
-	$(RM) *.o kajc parser.c parser.h
 
 

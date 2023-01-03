@@ -1,83 +1,148 @@
+%%  (C) by Remo Dentato (rdentato@gmail.com)
+%% 
+%% This software is distributed under the terms of the MIT license:
+%%  https://opensource.org/licenses/MIT
 
-%
-% +  -  *  /
-% &  | ^ ~ >> << >= <= > < 
-% ++ -- 
-% && ||
+%% SUPPORT C FUNCTIONS
 
 {
-  #include "dbg.h"
-
-  skpfunc(op) {
-                //    0123456789012
-    static char *ops="!><=+-|&%*/^~";
-    const int ops_len = 13;
-    char *p = ops;
-    int32_t n = 0;
-
-    while (*p && *p != skpcur[0]) p++;
-    if (*p == '\0') skpreturn(NULL,0);
-
-    n = p - ops  ;
-    skpcur++;
-
-    if (n <= 7  && *skpcur == *p )  {skpcur++; n+= ops_len;}
-    if (n <= 3  && *skpcur == '=' ) {skpcur++; n+= 8+ops_len;}
-
-    skpreturn(skpcur,n+1);
-  }
+  #include "parser_aux.c"
+  #include "parser_gen.c"
 }
 
-prog = fndef* _block _EOF_ ;
+%% ACTIONS
+{
+static int32_t asm_counter = 0;
+
+#define startmain_act    mainnode = astcurnode; \
+                         if (!sortfunc()) { \
+                           astseterrmsg("duplicate function");\
+                           skpast(fail);\
+                         } \
+                         if (mainnode > 1) asm_counter = 4;\
+                         dbgtrc("LBL:%d @:%d",mainnode,asm_counter);
+
+#define endprog_act      astsetlastinfo(mainnode); \
+                         dbgtrc("LBL:%d @:%d",astcurnode-1,asm_counter); \
+                         cleanfunc();
+
+#define newfunc_act      if (!addfunc(astcurfrom,astcurnode-1)) skpast(fail);\
+                         dbgtrc("LBL:%d",astcurnode-1);\
+                         skpast(delete);
+
+#define endfunc_act      while (astnodeis(astcur,astcurnode-1,return)) skpast(delete);
+                         
+#define checkloop_act    if (loopstk_cnt == 0) { \
+                           astseterrmsg("break outside loop"); \
+                           skpast(fail); \
+                         }
+
+#define checkfunc_act    if (infunc == 0) skpast(fail); 
+
+#define fcall_act        int k; \
+                         if ( (k = searchfunc(astcurfrom)) < 0) { \
+                           astseterrmsg("undefined function"); \
+                           skpast(fail); \
+                         } \
+                         else astretval( k );
+
+#define loopstart_act    skpast(delete); \
+                         loopstk_push(astcurnode-1); \
+                         dbgtrc("LBL:%d",astcurnode-1);
+
+#define loopend_act      astretval(loopstk_top()); \
+                         loopstk_drop(); \
+                         dbgtrc("LBL:%d @:%d",astcurnode+3,asm_counter);
+
+}
+
+%% GRAMMAR RULES
+
+prog = fndef*  { startmain_act }
+       _block
+       endprog   { endprog_act }  ;
+
+endprog = __ {astseterrmsg("Unexpected code after end of program"); }
+          _"!."  ;
+
+fndef = _FUNC fndef_name {? infunc = 1; newfunc_act; }
+              _block     {  infunc = 0;} {? endfunc_act; }  ;
+
+fndef_name = _fname ;
+func_body  = _block;
 
 block = _DO ( _stmt __ )+ _END ;
 
-fndef = _FUNC fndef_name func_block ;
-fndef_name = _fname;
-func_block = _block;
+stmt = __ (  _IF
+           / block 
+           / loop {? astsettag(astcurnode+1) ;} 
+           / (break  / exit / return) {? astsetempty; }
+           / _term 
+          ) ;
 
-stmt = _if / _while / __ _term   ;
+IF = _'?' if   {? astsettag(astcurnode+2) ; dbgtrc("LBL:%d",astcurnode+2);}
+          else {? astsettag(astcurnode+1) ; dbgtrc("LBL:%d",astcurnode+1);} endif ;
 
-if = _IF __ expr then_block else_block ;
-then_block = _block ;
-else_block = (_ELSE _block)? ;
+if    = _block / _stmt ;
+else  = (__ _':' (_block / _stmt))? ;
+endif = {} ;
 
-while = _WHILE __ expr while_block ;
-while_block = _block ;
+loop = LOOP  {? loopstart_act; } 
+      _block loopend   ;
 
-% Expressions are in rpn form
-expr = (__ _term)+ ;
+loopend = {? loopend_act; };
 
-term = _num / fcall / op[] / getvar / setvar;
+break  =       { checkloop_act; }  % 'break' is allowed only within a loop
+        _BREAK {? astretval(loopstk_top()); } ;
 
-getvar =      _location ;
-setvar = _'@' _location ;
+return = { checkfunc_act; }  % 'return' is allowed only within a function
+        _RETURN ;  
 
-location = var _index  ;
-var = _"u";
-index = (_'[' __ ndxpr __ ( _',' __ ndxpr __ )* _']')? ;
-ndxpr = _expr;
+exit = _EXIT ;
 
-% op = _"[*/%&^~] \1 '-' ?'-' \1 '+' ?'+' \1 '>' ?[>=] \1  '<' ?[<=] \1 '==' \1 '!' ?'='" ; 
+term ={ astseterrmsg("Unknow term"); }
+       _num
+     / string
+     / _'#' label {? astdelete; }
+     / op[]  {? asm_counter += 2; }       % Check parser_aux.c for operators.
+     / syscall {? asm_counter += 10; }
+     / fcall {? asm_counter += 2; }
+     / getvar
+     / _'@' (setdropvar / setvar);
 
-fcall = _fname ;
+label = _"D" {? int32_t l=-strtol(astcurfrom,NULL,10); dbgtrc("LBL:%d @:%d", l, asm_counter); } ;
 
-fname = (_"'.' +l")+ ;
+getvar = _"u" {? astretval(*astcurfrom -'@'); }
+         _index  ;
+
+setvar = _"u" {? astretval(*astcurfrom -'@'); }
+         _index  ;
+
+setdropvar = _'!' _setvar {? astretval(astcurfrom[1] -'@'); } ;
+
+index = ( _'[' ndxpr __ ( _',' ndxpr __ )* _']' )? ;
+ndxpr = (__ _term)* ;
+
+fcall = _fname {? fcall_act; } ;
+
+syscall = (_fname _fname) {? astretval(addcall(astcurfrom,astcurptr,astcurnode)); };
+
+fname = _"'.' +[0-5a-z]" ;
 
 num = hex / float / int ;
 
-hex = "'0' [Xx] X" ;
-float = int ("'.' *d")? ;
-int = _"D" ;
+hex    = _"'0' [Xx] X" {? asm_counter += 6; };
+int    = _"D"          {? asm_counter += 6; };
+float  = _"D '.' *d"   {? asm_counter += 10; };
+string = _"Q"          {? astretval(round2(astcurpos-astprevpos+1-2)); } ;
+
+DO     = __ _"'do'     !& i" __ ;
+END    = __ _"'end'    !& i" __ ;
+FUNC   = __ _"'func'   !& i" __ ;
+LOOP   = __ _"'loop'   !& i" __ ;
+BREAK  = __ _"'break'  !& i" __ ;
+EXIT   = __ _"'exit'   !& i" __ ;
+RETURN = __ _"'return' !& i" __ ;
 
 _     =    (_"+s" / _"'//' N")* ;
 SPC_  =    (_"+s" / _"'//' N")+ ;
-EOF_  = __ _"!." ;
-
-IF    = __ _"'if'    !& i" __ ;
-ELSE  = __ _"'else'  !& i" __ ;
-DO    = __ _"'do'    !& i" __ ;
-FUNC  = __ _"'func'  !& i" __ ;
-WHILE = __ _"'while' !& i" __ ;
-END   = __ _"'end'   !& i" __ ;
-

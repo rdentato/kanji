@@ -1,0 +1,20 @@
+
+/* 
+
+
+PUSH_CONST
+PUSH_STR
+
+PUSH_VAL ptr
+
+
+
+JUMP +4
+JUMP
+CALL
+RETURN
+
+
+
+
+*/

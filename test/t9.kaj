@@ -1,0 +1,8 @@
+// func .a do nop end
+
+//do #300 + #430 300 end
+do 
+ .io.print 
+ .midi.noteon
+ .io.print
+end

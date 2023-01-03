@@ -1,0 +1,18 @@
+func .tens do
+  10 >= ? "Ok" : "Ko"
+  return
+end
+
+func .decs do
+  6
+end
+
+do
+  4.6
+  loop do 
+    empty ? break
+          : .io.print
+    3.3
+  end
+  4
+end
