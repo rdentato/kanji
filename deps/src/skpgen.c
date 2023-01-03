@@ -175,6 +175,7 @@ uint8_t stkcnt = 0;
 #define push(n) (altstk[stkcnt++] = (n))
 #define pop()   (altstk[--stkcnt])
 
+int32_t opcode=0;
 
 void generatecode(ast_t ast, FILE *src, FILE *hdr, int nl)
 {
@@ -184,6 +185,11 @@ void generatecode(ast_t ast, FILE *src, FILE *hdr, int nl)
   int32_t indent = 0;
   int32_t line = 1 ;
   char *line_pos = NULL ;
+
+  FILE *tmpf = tmpfile();
+
+  assert(tmpf);
+  fprintf(tmpf,"\nvoid skptagrules() {\n");
 
   astvisit(ast) {
     astonentry {
@@ -208,8 +214,13 @@ void generatecode(ast_t ast, FILE *src, FILE *hdr, int nl)
         if (nl == ' ') fprintf(src,"#line %d\n",line);
         fprintf(src,"skpdef(%.*s) {%c",astcurlen, astcurfrom,nl);
         indent = 2;
-        fprintf(hdr,"extern char *skp_N_%.*s;\n",astcurlen, astcurfrom);
+        fprintf(hdr,"\nextern char skp_N_%.*s[];\n",astcurlen, astcurfrom);
+        fprintf(hdr,"#ifndef skp_T_%.*s\n",astcurlen, astcurfrom);
+        fprintf(hdr,"#define skp_T_%.*s %d\n",astcurlen, astcurfrom, ++opcode);
+        fprintf(hdr,"#endif\n");
         fprintf(hdr,"void skp_R_%.*s();\n",astcurlen, astcurfrom);
+
+        fprintf(tmpf,"  skpsetruletag(%.*s,skp_T_%.*s);\n",astcurlen, astcurfrom,astcurlen, astcurfrom);
       }
 
       // <? swap or flat if empty
@@ -285,7 +296,12 @@ void generatecode(ast_t ast, FILE *src, FILE *hdr, int nl)
         if (repeat) { indent-=2; fprintf(src,"%*s}%c",indent,skpemptystr,nl); }
         repeat = '\0';
         modifier = 0;
-        fprintf(hdr,"extern char *skp_N_%.*s;\n",astcurlen, astcurfrom);
+        fprintf(hdr,"\nextern char skp_N_%.*s[];\n",astcurlen, astcurfrom);
+        fprintf(hdr,"#ifndef skp_T_%.*s\n",astcurlen, astcurfrom);
+        fprintf(hdr,"#define skp_T_%.*s %d\n",astcurlen, astcurfrom, ++opcode);
+        fprintf(hdr,"#endif\n");
+
+        fprintf(tmpf,"  skpsetruletag(%.*s,skp_T_%.*s);\n",astcurlen, astcurfrom,astcurlen, astcurfrom);
       }
 
       astcase(lu_func) {
@@ -299,7 +315,12 @@ void generatecode(ast_t ast, FILE *src, FILE *hdr, int nl)
         push(rpt);
         repeat = '\0';
         modifier = 0;
-        fprintf(hdr,"extern char *skp_N_%.*s;\n",astcurlen, astcurfrom);
+        fprintf(hdr,"\nextern char skp_N_%.*s[];\n",astcurlen, astcurfrom);
+        fprintf(hdr,"#ifndef skp_T_%.*s\n",astcurlen, astcurfrom);
+        fprintf(hdr,"#define skp_T_%.*s %d\n",astcurlen, astcurfrom, ++opcode);
+        fprintf(hdr,"#endif\n");
+
+        fprintf(tmpf,"  skpsetruletag(%.*s,skp_T_%.*s);\n",astcurlen, astcurfrom,astcurlen, astcurfrom);
       }
 
       astcase(lu_case) {
@@ -417,6 +438,12 @@ void generatecode(ast_t ast, FILE *src, FILE *hdr, int nl)
       }
     }
   }
+  fseek(tmpf,0,SEEK_SET);
+  for (int c; (c = fgetc(tmpf)) >=0; ) {
+    fputc(c,src);
+  }
+  fclose(tmpf);
+  fprintf(src,"}\n");
 }
 
 /************************************/
@@ -507,13 +534,18 @@ int main(int argc, char *argv[])
     snprintf(fnamebuf,MAXFNAME,"%s.c",argv[argn]);
     src = fopen(fnamebuf,"w");
     if (src) {
-      if (newline == ' ') fprintf(src,"#line 1 \"%s.skp\"\n",argv[argn]);
+      if (newline == ' ') {
+        fprintf(src,"/***  GENERATED FILE. DO NOT MODIFY ***/\n");
+        fprintf(src,"#line 3 \"%s.skp\"\n",argv[argn]);
+      }
       snprintf(fnamebuf,MAXFNAME,"%s.h",argv[argn]);
       hdr = fopen(fnamebuf,"w");
       if (hdr) {
-        fprintf(hdr,"#include \"skp.h\"\n");
+        fprintf(src,"#include \"%s\"\n",fnamebuf);
+        fprintf(hdr,"/***  GENERATED FILE. DO NOT MODIFY ***/\n");
         fprintf(hdr,"#ifndef SKP_PARSE_%s\n",argv[argn]);
         fprintf(hdr,"#define SKP_PARSE_%s\n",argv[argn]);
+        fprintf(hdr,"#include \"skp.h\"\n");
         generatecode(ast,src,hdr,newline);
       }
     }
@@ -521,6 +553,8 @@ int main(int argc, char *argv[])
 
   if (src) fclose(src);
   if (hdr) {
+    fprintf(hdr,"\nvoid skptagrules();\n");
+
     fprintf(hdr,"#endif\n");
     fclose(hdr);
   }
