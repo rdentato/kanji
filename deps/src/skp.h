@@ -534,9 +534,9 @@ static int match(char *pat, char *src, char **pat_end, char **src_end,int *flg)
 
       case 'F' : // Floating point number
                  if (s_chr == '+' || s_chr == '-') { // sign
-                   do {
+                   //do {
                      get_next_s_chr();
-                   } while (is_space(s_chr));
+                   //} while (is_space(s_chr));
                  } 
    
                  while (is_digit(s_chr)) {
@@ -660,7 +660,7 @@ int skp_(char *src, char *pat, char **to,char **end)
 // PARSE ******************************************************
 // ************************************************************ 
 
-extern char *skp_N__STRING;
+extern char skp_N__STRING[];
 
 /* 
 ## Parsing
@@ -714,8 +714,8 @@ typedef int32_t astnode_t;
 
 typedef struct ast_node_s {
   char   *rule;
-  astnode_t from;
-  astnode_t to;
+  int32_t from;
+  int32_t to;
   int32_t delta; // delta between parenthesis (>0)
   int32_t tag;  // on 64bit systems this would be allocated anyway.
 } ast_node_t;
@@ -810,11 +810,18 @@ void skp__abort(ast_t ast, char *msg,char *rule);
 #define astretval(n) (skp_ret[0]=(n))
 #define astret (skp_ret[0])
 
+#define astcurpos (astcur->pos)
+#define astprevpos (astcur->lastpos)
+
 #define astcurptr (astcur->start+astcur->pos)
 #define astprevptr (astcur->start+astcur->lastpos)
 
+#define skprulenameptr(rule) (skp_N_ ## rule + 4)
+#define skpsetruletag(rule,n) (((int32_t *)(skp_N_ ## rule))[0] = (n))
+#define skpgetruletag(rule)   (((int32_t *)(skp_N_ ## rule))[0])
+
 #define skpdef(rule) \
-    char *skp_N_ ## rule = #rule; \
+    char skp_N_ ## rule [] = "\0\0\0\0" #rule; \
     ast_mmz_t skp_M_ ## rule [4] = {SKP_MMZ_NULL, SKP_MMZ_NULL, SKP_MMZ_NULL, SKP_MMZ_NULL}; \
     void  skp_R_ ## rule (ast_t astcur, int32_t *skp_ret) 
 
@@ -830,7 +837,6 @@ void skp__abort(ast_t ast, char *msg,char *rule);
         astcur->pos += len; \
         ast_close(astcur,astcur->pos,par); \
         astcur->nodes[astcur->par[par]].tag = n; \
-        astcur->cur_node = par; \
       } \
       if (astcur->flg & SKP_DEBUG) skptrace("%s: %s @%d", skp_matchfailed+(!!astfailed)*6, "^^^",astcur->pos); \
     } else (void)0
@@ -866,7 +872,7 @@ void skp__abort(ast_t ast, char *msg,char *rule);
 #define skpmanyblanks() skpmatch_("&+w");
 
 #define skpcur skp_cur[0]
-#define skpfunc(f)     char *skp_N_ ## f = #f; \
+#define skpfunc(f)     char skp_N_ ## f [] = "\0\0\0\0" #f; \
                        int32_t skp_F_ ## f(char **skp_cur)
 
 #define skpreturn(r,k) return ((skpcur = (r)), k)
@@ -882,7 +888,7 @@ void skp__abort(ast_t ast, char *msg,char *rule);
 
 #define skp_fcall(f) \
     if (!astfailed) { \
-      extern char *skp_N_ ## f; \
+      extern char skp_N_ ## f []; \
       char *from_ = astcur->start+astcur->pos;\
       if (astcur->flg & SKP_DEBUG) skptrace("CALL: %s @%d",#f,astcur->pos); \
       int32_t par; \
@@ -895,7 +901,6 @@ void skp__abort(ast_t ast, char *msg,char *rule);
         astcur->pos = (int32_t)(from_-astcur->start); \
         ast_close(astcur,astcur->pos,par); \
         astcur->nodes[astcur->par[par]].tag = info; \
-        astcur->cur_node = par; \
       } \
       if (astcur->flg & SKP_DEBUG) skptrace("RETURN: %s @%d fail: %d info: %d",#f,astcur->pos,astfailed, info); \
     } 
@@ -927,14 +932,14 @@ typedef struct {
 
 #define skprule_(rule) \
     if (!astfailed) { \
-      extern char *skp_N_ ## rule; \
+      extern char skp_N_ ## rule []; \
       extern ast_mmz_t skp_M_ ## rule [4]; \
       void skp_R_ ## rule (ast_t astcur,int32_t *skp_ret); \
       astcurrule = skp_N_ ## rule;\
       int32_t ast_ret=0;\
       int32_t sav_pos = astcur->pos;\
       skp_save;\
-      if (astcur->flg & SKP_DEBUG) skptrace("ENTER: %s @%d",skp_N_ ## rule,astcur->pos); \
+      if (astcur->flg & SKP_DEBUG) skptrace("ENTER: %s @%d",skp_N_ ## rule +4 ,astcur->pos); \
       if (astcur->depth++ > SKP_MAXDEPTH) skp_abort(astcurrule, skp_msg_leftrecursion);\
       if (!skp_dememoize(astcur, skp_M_ ## rule, skp_N_ ## rule)) { \
         skp_R_ ## rule(astcur,&ast_ret); \
@@ -946,20 +951,20 @@ typedef struct {
         } else {astcur->lastpos = sav_pos; astcur->lastinfo = ast_ret;}\
         skp_memoize(astcur, skp_M_ ## rule ,skp_N_ ## rule, sav.pos, sav.par_cnt); \
       } \
-      if (astcur->flg & SKP_DEBUG) skptrace("%s: %s @%d", skp_matchfailed+(!!astfailed)*6, skp_N_ ## rule,astcur->pos); \
+      if (astcur->flg & SKP_DEBUG) skptrace("%s: %s @%d", skp_matchfailed+(!!astfailed)*6, skp_N_ ## rule +4,astcur->pos); \
       astcur->depth--; \
     } else (void)0
 
 #define skprule(rule) \
     if ((!(astcur->flg & SKP_LEFTRECUR)) && !astfailed) { \
-      extern char *skp_N_ ## rule; \
+      extern char skp_N_ ## rule []; \
       extern ast_mmz_t skp_M_ ## rule [4]; \
       astcurrule = skp_N_ ## rule;\
       void skp_R_ ## rule (ast_t astcur, int32_t *skp_ret); \
       int32_t sav_par_cnt = astcur->par_cnt; \
       int32_t sav_pos = astcur->pos;\
       int32_t ast_ret = 0; \
-      if (astcur->flg & SKP_DEBUG) skptrace("ENTER: %s @%d",skp_N_ ## rule,astcur->pos); \
+      if (astcur->flg & SKP_DEBUG) skptrace("ENTER: %s @%d",skp_N_ ## rule + 4,astcur->pos); \
       if (astcur->depth++ > SKP_MAXDEPTH) skp_abort(astcurrule, skp_msg_leftrecursion);\
       if (!skp_dememoize(astcur, skp_M_ ## rule, skp_N_ ## rule)) { \
         int32_t par = ast_open(astcur,astcur->pos, skp_N_ ## rule); \
@@ -973,12 +978,11 @@ typedef struct {
         if (!astfailed) { \
           astcur->nodes[astcur->par[par]].tag = ast_ret; \
           astcur->lastinfo = ast_ret;\
-          astcur->cur_node = par; \
           astcur->lastpos = sav_pos; \
         } \
         skp_memoize(astcur, skp_M_ ## rule ,skp_N_ ## rule,sav_pos,sav_par_cnt); \
       } \
-      if (astcur->flg & SKP_DEBUG) skptrace("%s: %s @%d", skp_matchfailed+(!!astfailed)*6, skp_N_ ## rule,astcur->pos); \
+      if (astcur->flg & SKP_DEBUG) skptrace("%s: %s @%d", skp_matchfailed+(!!astfailed)*6, skp_N_ ## rule +4,astcur->pos); \
       astcur->depth--; \
     } else (void)0
 
@@ -1066,7 +1070,7 @@ void ast_swap(ast_t ast);
 int32_t ast_newpar(ast_t ast);
 int32_t ast_newnode(ast_t ast);
 
-#define astlower(a,r,f,t) do { extern char *skp_N_ ## r; ast_lower(a, skp_N_ ## r, f, t); } while(0)
+#define astlower(a,r,f,t) do { extern char skp_N_ ## r []; ast_lower(a, skp_N_ ## r, f, t); } while(0)
 void ast_lower(ast_t astcur, char *rule, astnode_t from, astnode_t to);
 
 #define astlift ast_lift(astcur)
@@ -1089,6 +1093,9 @@ astnode_t ast_lastnode(ast_t ast);
 
 #define astlastnodeisempty ast_lastnodeisempty(astcur)
 int ast_lastnodeisempty(ast_t ast);
+
+#define astsetempty ast_lastnodesetempty(astcur)
+int ast_lastnodesetempty(ast_t ast);
 
 #define astdelete ast_delete(astcur)
 #define astremove ast_delete(astcur)
@@ -1124,7 +1131,7 @@ int astisleaf(ast_t ast, astnode_t node);
 
 int asthaserr(ast_t ast);
 
-#define astnumnodes(a) ((a)->nodes_cnt)
+#define astnumnodes(a) (((a)->par_cnt)/2)
 void astprintsexpr(ast_t ast, FILE *f);
 void astprinttree(ast_t ast, FILE *f);
 
@@ -1395,8 +1402,8 @@ int skp_debug2(ast_t ast,uint8_t d)
   return ast->flg & SKP_DEBUG;
 }
 
-char *skp_N__STRING = "$";
-char *skp_N__INFO   = "#";
+char skp_N__STRING[] = "\0\0\0\0$";
+char skp_N__INFO  [] = "\0\0\0\0#";
 
 ast_t skp_parse(char *src, skprule_t rule,char *rulename, int debug)
 {
@@ -1435,6 +1442,18 @@ int ast_lastnodeisempty(ast_t ast)
   nd = ast->nodes+ast->par[node];
   return (nd->from == nd->to); 
 } 
+
+int ast_lastnodesetempty(ast_t ast)
+{
+  astnode_t node;
+  ast_node_t *nd;
+  node = ast_lastnode(ast);
+  if (node == ASTNULL) return 0;
+  assert(ast->par[node]>=0);
+  nd = ast->nodes+ast->par[node];
+  nd->to = nd->from;
+  return (1); 
+}
 
 //ast_node_t *ast_lastnode(ast_t ast)
 int32_t ast_lastnode(ast_t ast)
@@ -1678,6 +1697,8 @@ void ast_delete(ast_t ast)
   if (o1<0 || ast->par[o1] < 0) return;
 
   ast->par_cnt -= (c1-o1+1);
+  ast->cur_node = ast->par_cnt;
+  //skptrace("XX:%d",ast->par_cnt);
 }
 
 void ast_noleaf(ast_t ast)
@@ -1698,7 +1719,7 @@ void ast_noleaf(ast_t ast)
   if (o1<0 || ast->par[o1] < 0) return;
 
   if (c1 == o1+1) ast->par_cnt-=2;
-
+  ast->cur_node = ast->par_cnt;
 }
 
 void ast_noemptyleaf(ast_t ast)
@@ -1724,6 +1745,8 @@ void ast_noemptyleaf(ast_t ast)
      return; // not empty
   
   ast->par_cnt-=2;
+  ast->cur_node = ast->par_cnt;
+
 }
 
 /*******************************************************************************/
@@ -1883,6 +1906,7 @@ int32_t astnodelen(ast_t ast, int32_t node)
 {
   if (!ast || node >= ast->par_cnt || node < 0) return 0;
   if (ast->par[node]<0) node += ast->par[node];
+  //fprintf(stderr,"LEN: %d %d %d\n",node,(ast->nodes[ast->par[node]].to),(ast->nodes[ast->par[node]].from));
   return (ast->nodes[ast->par[node]].to - ast->nodes[ast->par[node]].from);
 }
 
@@ -1996,6 +2020,7 @@ int32_t ast_newpar(ast_t ast)
   return ast->par_cnt++;
 }
 
+// Making sure that there is enough room in the ast->nodes array to hold the new node.
 static int skp_nodes_makeroom(ast_t ast,int32_t needed)
 {
   int32_t new_max;
@@ -2016,11 +2041,13 @@ static int skp_nodes_makeroom(ast_t ast,int32_t needed)
   return 1;
 }
 
+// Creating a new node in the AST.
 int32_t ast_newnode(ast_t ast)
 {
   if (!skp_nodes_makeroom(ast,1)) return -1;
   return ast->nodes_cnt++; 
 }
+
 
 int32_t ast_open(ast_t ast, astnode_t from, char *rulename)
 {
@@ -2032,6 +2059,7 @@ int32_t ast_open(ast_t ast, astnode_t from, char *rulename)
   if ((node = ast_newnode(ast)) < 0) return -1;
   ast->par[par] = node;
   ast->nodes[node] = (ast_node_t){rulename,from,0,0,0};
+  ast->cur_node=par;
   return par;
 }
 
@@ -2063,6 +2091,7 @@ int32_t ast_close(ast_t ast, astnode_t to, astnode_t open)
   return par;
 }
 
+// Adding a new info node to the AST.
 void astnewinfo(ast_t ast, int32_t info)
 {
   astnode_t par;
@@ -2073,6 +2102,8 @@ void astnewinfo(ast_t ast, int32_t info)
     ast->lastinfo = info;
   }
 }
+
+
 
 int32_t astnodeinfo(ast_t ast, astnode_t node)
 {
@@ -2090,14 +2121,15 @@ void ast_setinfo(ast_t ast, int32_t info, astnode_t node)
   ast->nodes[ast->par[node]].tag = info;
 }
 
+//Printing the AST in a sexpr format.
 void astprintsexpr(ast_t ast, FILE *f)
 {
   int32_t node = ASTNULL;
   while ((node = astnextdf(ast,node)) != ASTNULL) {
     if (astisnodeentry(ast,node)) {
-      fprintf(f,"(%s ",astnoderule(ast,node));
+      fprintf(f,"(%s ",astnoderule(ast,node)+4);
       if (astisleaf(ast,node)) {
-        fputc('\'',f);
+        // fputc('\'',f);
         if (astnoderule(ast,node) == skp_N__INFO) {
           fprintf(f,"%d",astnodeinfo(ast,node));
         }
@@ -2105,13 +2137,14 @@ void astprintsexpr(ast_t ast, FILE *f)
           if (*s == '\'') fputc('\\',f);
           fputc(*s,f);
         }
-        fputc('\'',f);
+        // fputc('\'',f);
       }
     }
     else fputc(')',f);
   }
 }
 
+// Printing the AST in a human readable format.
 void astprinttree(ast_t ast, FILE *f)
 {
   int32_t node = ASTNULL;
@@ -2121,7 +2154,10 @@ void astprinttree(ast_t ast, FILE *f)
     if (astisnodeentry(ast,node)) {
       for (int k=0; k<levl; k+=4) fputs("    ",f);
 //      fprintf(f,"[%s #%zX]",astnoderule(ast,node),(uintptr_t)astnoderule(ast,node));
-      fprintf(f,"[%s",astnoderule(ast,node));
+      fprintf(f," %3d [", node);
+      tag = ((int32_t *)astnoderule(ast,node))[0];
+      if (tag != 0) fprintf (f,"(%d) ",tag);
+      fprintf(f,"%s",astnoderule(ast,node) +4);
       tag = astnodeinfo(ast,node);
       if (tag != 0) fprintf (f," (%d)",tag);
       fputc(']',f); 
